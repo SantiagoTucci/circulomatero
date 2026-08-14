@@ -186,7 +186,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Footer */}
+        {/* 
         <m.footer
           className="bg-foreground text-background py-8"
           initial={{ opacity: 0, y: 40 }}
@@ -209,7 +209,7 @@ export default function Home() {
               </a>
             </div>
           </div>
-        </m.footer>
+        </m.footer>Footer */}
       </m.div>
     </LazyMotion>
   );
