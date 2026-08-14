@@ -6,12 +6,12 @@
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "strict": true,
-    "baseUrl": "./src",
-    "paths": { "@/*": ["*"] },
+    "paths": {
+      "@/*": ["./*"]
+    },
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "ignoreDeprecations": "6.0"
+    "noEmit": true
   }
 }
