@@ -186,7 +186,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 
+        {/* Footer */}
         <m.footer
           className="bg-foreground text-background py-8"
           initial={{ opacity: 0, y: 40 }}
@@ -196,7 +196,7 @@ export default function Home() {
         >
           <div className="container mx-auto px-4 text-center space-y-4">
             <p className="text-sm opacity-80">© 2025 Círculo Matero. Todos los derechos reservados.</p>
-            <div className="flex items-center justify-center gap-2">
+           {/*  <div className="flex items-center justify-center gap-2">
               <span className="text-sm opacity-80">Hecho por</span>
               <a
                 href="https://www.instagram.com/tucciwebstudio"
@@ -207,9 +207,9 @@ export default function Home() {
                 <Instagram className="w-4 h-4" />
                 <span className="text-md font-semibold">Tucci Web Studio</span>
               </a>
-            </div>
+            </div>*/}
           </div>
-        </m.footer>Footer */}
+        </m.footer>
       </m.div>
     </LazyMotion>
   );
