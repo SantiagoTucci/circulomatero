@@ -99,7 +99,7 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
         total: formatPrice(total),
       }
 
-      await emailjs.send("service_29my0bi", "template_amenbz9", templateParams, "UUWrV55n6pCMnFoQk")
+      await emailjs.send("service_wav5fsj", "template_amenbz9", templateParams, "UUWrV55n6pCMnFoQk")
 
       setIsSuccess(true)
       clearCart()
