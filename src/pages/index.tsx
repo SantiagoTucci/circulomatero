@@ -1,13 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { Instagram } from "lucide-react";
-import { sampleProducts } from "../../public/productos/productos";
+import { getProducts, sampleProducts } from "../../public/productos/productos";
+import { Product } from "@/types/product";
 import { InfiniteCarousel } from "@/components/infinite-carousel";
 import { ProductCard } from "@/components/product-card";
-import { motion, LazyMotion, domAnimation, m, useMotionValue, useTransform, animate } from "framer-motion";
+import { LazyMotion, domAnimation, m, useMotionValue, useTransform, animate } from "framer-motion";
 
 export default function Home() {
+  // Inicializamos en vacío para mostrar la animación/Skeleton de carga adecuadamente
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
   const carouselImages = [
     "/carousel-images/messi-mateando.jpg",
     "/carousel-images/mate-auto.jpg",
@@ -20,6 +25,29 @@ export default function Home() {
     document.body.style.overflowX = "hidden";
     return () => {
       document.body.style.overflowX = "";
+    };
+  }, []);
+
+  // Fetch de productos desde Google Sheets
+  useEffect(() => {
+    let isMounted = true;
+
+    getProducts()
+      .then((data) => {
+        if (isMounted) {
+          setProducts(data && data.length > 0 ? data : sampleProducts);
+        }
+      })
+      .catch((err) => {
+        console.error("Error al cargar productos dinámicos:", err);
+        if (isMounted) setProducts(sampleProducts);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
     };
   }, []);
 
@@ -46,12 +74,20 @@ export default function Home() {
             </p>
           </m.div>
 
-          {/* 🧉 Grid de productos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
-            {sampleProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {/* 🧉 Grid de productos o Skeletons */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-96 bg-muted/40 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </main>
 
         {/* 🧉 Sección Nosotros */}
@@ -178,6 +214,7 @@ export default function Home() {
                     src="https://www.tiktok.com/embed/7556644757905198392"
                     allowFullScreen
                     title="Video de Círculo Matero"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
                     className="w-full h-full rounded-2xl border-0"
                   ></iframe>
                 </div>
@@ -195,19 +232,7 @@ export default function Home() {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="container mx-auto px-4 text-center space-y-4">
-            <p className="text-sm opacity-80">© 2025 Círculo Matero. Todos los derechos reservados.</p>
-           {/*  <div className="flex items-center justify-center gap-2">
-              <span className="text-sm opacity-80">Hecho por</span>
-              <a
-                href="https://www.instagram.com/tucciwebstudio"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 hover:opacity-100 opacity-80 transition"
-              >
-                <Instagram className="w-4 h-4" />
-                <span className="text-md font-semibold">Tucci Web Studio</span>
-              </a>
-            </div>*/}
+            <p className="text-sm opacity-80">© 2026 Círculo Matero. Todos los derechos reservados.</p>
           </div>
         </m.footer>
       </m.div>
@@ -215,10 +240,10 @@ export default function Home() {
   );
 }
 
-// Animated numbers optimizados
+// Numbers animados
 function AnimatedNumber({ value }: { value: number }) {
   const count = useMotionValue(0);
-  const rounded = useTransform(count, latest => Math.floor(latest));
+  const rounded = useTransform(count, (latest) => Math.floor(latest));
 
   useEffect(() => {
     const controls = animate(count, value, { duration: 1.5, ease: "easeOut" });
