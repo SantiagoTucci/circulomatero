@@ -56,19 +56,20 @@ export const sampleProducts: Product[] = [
 // Reemplaza esta URL por la que obtuviste en "Publicar en la web"
 const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
 
+// Transformador de enlaces de Google Drive a URLs de imagen directas
 function getDirectDriveImageUrl(url: string): string {
   if (!url) return "/placeholder.svg";
 
   // Extrae el ID único del archivo de Google Drive
-  const driveIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+  const driveIdMatch =
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
 
   if (driveIdMatch && driveIdMatch[1]) {
     const fileId = driveIdMatch[1];
-    // Enlace directo de visualización pública
-    return `https://lh3.googleusercontent.com/d/${fileId}`;
+    // Usa la API de thumbnails de Google (sz=w1000 asigna calidad HD de 1000px de ancho)
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
   }
 
-  // Si no es un link de Drive pero arranca sin / ni http, le pone la barra
   if (!url.startsWith("/") && !url.startsWith("http")) {
     return "/" + url;
   }
@@ -111,9 +112,16 @@ export const getProducts = async (): Promise<Product[]> => {
     else if (lines[0].includes(";")) delimiter = ";";
 
     const rawHeaders = parseCSVLine(lines[0], delimiter);
-    const headers = rawHeaders.map((h) => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ""));
+    const headers = rawHeaders.map((h) =>
+      h.toLowerCase().trim().replace(/[^a-z0-9]/g, "")
+    );
 
-    const products: Product[] = lines.slice(1).map((line, index) => {
+    const products: Product[] = [];
+
+    lines.slice(1).forEach((line, index) => {
+      // Ignora líneas que contengan scripts accidentalmente
+      if (line.includes("<script>") || line.includes("function(")) return;
+
       const values = parseCSVLine(line, delimiter);
       const rowData: Record<string, string> = {};
 
@@ -128,25 +136,35 @@ export const getProducts = async (): Promise<Product[]> => {
         return "";
       };
 
-      const name = findVal(["name", "nombre", "product", "producto"]) || values[1] || "Producto sin nombre";
-      const description = findVal(["description", "descripcion", "detalle"]) || values[2] || "";
-      const priceRaw = (findVal(["price", "precio", "valor"]) || values[3] || "0").replace(/[^0-9.]/g, "");
+      const name =
+        findVal(["name", "nombre", "product", "producto"]) || values[1];
+      const description =
+        findVal(["description", "descripcion", "detalle"]) || values[2] || "";
+      const priceRaw = (
+        findVal(["price", "precio", "valor"]) ||
+        values[3] ||
+        "0"
+      ).replace(/[^0-9.]/g, "");
       const price = Number(priceRaw) || 0;
-      const type = findVal(["type", "tipo", "categoria"]) || values[4] || "tradicional";
-      let image = findVal(["image", "imagen", "foto"]) || values[5] || "/placeholder.jpg";
+      const type =
+        findVal(["type", "tipo", "categoria"]) || values[4] || "tradicional";
 
-      if (image && !image.startsWith("/") && !image.startsWith("http")) {
-        image = "/" + image;
+      const rawImage =
+        findVal(["image", "imagen", "foto"]) || values[5] || "/placeholder.jpg";
+
+      // 💥 AQUÍ SE APLICA LA CONVERSIÓN DE GOOGLE DRIVE:
+      const image = getDirectDriveImageUrl(rawImage);
+
+      if (name) {
+        products.push({
+          id: findVal(["id"]) || values[0] || String(index + 1),
+          name,
+          description,
+          price,
+          type,
+          image,
+        });
       }
-
-      return {
-        id: findVal(["id"]) || values[0] || String(index + 1),
-        name,
-        description,
-        price,
-        type,
-        image,
-      };
     });
 
     return products.length > 0 ? products : sampleProducts;
