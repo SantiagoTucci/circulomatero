@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button"
 import { useCart } from "@/hooks/cart-context"
 import { X, Plus, Minus, ShoppingBag, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { parsePrice } from "@/lib/parse-price";
 
 interface CartSidebarProps {
   isOpen: boolean
   onClose: () => void
   onCheckout: () => void
 }
+
 
 export function CartSidebar({ isOpen, onClose, onCheckout }: CartSidebarProps) {
   const { items, updateQuantity, removeItem, getTotal } = useCart()
@@ -22,11 +24,17 @@ export function CartSidebar({ isOpen, onClose, onCheckout }: CartSidebarProps) {
       minimumFractionDigits: 0,
     }).format(amount)
 
-  const getItemPrice = (item: any) => (item.quantity >= 5 ? item.price * 0.7 : item.price)
+  // 🛠️ Usamos parsePrice para obtener el precio real numérico
+  const getItemPrice = (item: any) => {
+    const numericPrice = parsePrice(item.price)
+    return item.quantity >= 5 ? numericPrice * 0.7 : numericPrice
+  }
 
+  // 🛠️ Usamos parsePrice en el cálculo de ahorros
   const totalSavings = items.reduce((sum, item) => {
+    const numericPrice = parsePrice(item.price)
     if (item.quantity >= 5) {
-      return sum + (item.price - getItemPrice(item)) * item.quantity
+      return sum + (numericPrice - getItemPrice(item)) * item.quantity
     }
     return sum
   }, 0)
@@ -44,18 +52,18 @@ export function CartSidebar({ isOpen, onClose, onCheckout }: CartSidebarProps) {
             onClick={onClose}
           />
 
-          {/* Sidebar - responsive width */}
+          {/* Sidebar */}
           <motion.div
             className={cn(
               "fixed top-0 right-0 h-full bg-background shadow-2xl z-50 flex flex-col",
-              "w-full sm:w-[440px] md:w-[480px]",
+              "w-full sm:w-[440px] md:w-[480px]"
             )}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
           >
-            {/* Header with gradient accent */}
+            {/* Header */}
             <div className="relative border-b bg-gradient-to-r from-primary/5 to-secondary/5">
               <div className="flex items-center justify-between p-4 sm:p-6">
                 <div className="flex items-center gap-3">
@@ -75,7 +83,7 @@ export function CartSidebar({ isOpen, onClose, onCheckout }: CartSidebarProps) {
               </div>
             </div>
 
-            {/* Products list with better scrolling */}
+            {/* Products list */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
               {items.length === 0 ? (
                 <motion.div
@@ -93,97 +101,104 @@ export function CartSidebar({ isOpen, onClose, onCheckout }: CartSidebarProps) {
                   </Button>
                 </motion.div>
               ) : (
-                items.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    className={cn(
-                      "group relative border rounded-xl p-3 sm:p-4 bg-card",
-                      "hover:shadow-md hover:border-primary/30 transition-all duration-200",
-                    )}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    {/* Wholesale badge */}
-                    {item.quantity >= 5 && (
-                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
-                        -30%
-                      </div>
-                    )}
+                items.map((item, index) => {
+                  const numericPrice = parsePrice(item.price)
+                  const unitPriceWithDiscount = getItemPrice(item)
 
-                    <div className="flex gap-3 sm:gap-4">
-                      {/* Product image */}
-                      {item.image && (
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
-                          <img
-                            src={item.image || "/placeholder.svg"}
-                            alt={item.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
+                  return (
+                    <motion.div
+                      key={item.id}
+                      className={cn(
+                        "group relative border rounded-xl p-3 sm:p-4 bg-card",
+                        "hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                      )}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      {/* Wholesale badge */}
+                      {item.quantity >= 5 && (
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
+                          -30%
                         </div>
                       )}
 
-                      {/* Product info */}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm sm:text-base text-foreground truncate mb-1">
-                          {item.name}
-                        </h4>
-                        <div className="flex flex-col gap-1 mb-3">
-                          <p className="text-xs sm:text-sm text-muted-foreground font-[system-ui]">{formatPrice(item.price)} c/u</p>
-                          {item.quantity >= 5 && (
-                            <p className="text-xs font-medium text-green-600">
-                              Precio mayorista: {formatPrice(getItemPrice(item))} c/u
-                            </p>
-                          )}
-                        </div>
+                      <div className="flex gap-3 sm:gap-4">
+                        {/* Product image */}
+                        {item.image && (
+                          <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                            <img
+                              src={item.image || "/placeholder.svg"}
+                              alt={item.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            />
+                          </div>
+                        )}
 
-                        {/* Quantity controls - improved for mobile */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center border rounded-lg overflow-hidden bg-background">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-primary/10"
-                            >
-                              <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </Button>
-                            <div className="w-10 sm:w-12 text-center text-sm sm:text-base font-medium font-[system-ui]">
-                              {item.quantity}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-primary/10"
-                            >
-                              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </Button>
+                        {/* Product info */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm sm:text-base text-foreground truncate mb-1">
+                            {item.name}
+                          </h4>
+                          <div className="flex flex-col gap-1 mb-3">
+                            <p className="text-xs sm:text-sm text-muted-foreground font-[system-ui]">
+                              {formatPrice(numericPrice)} c/u
+                            </p>
+                            {item.quantity >= 5 && (
+                              <p className="text-xs font-medium text-green-600">
+                                Precio mayorista: {formatPrice(unitPriceWithDiscount)} c/u
+                              </p>
+                            )}
                           </div>
 
-                          {/* Price and delete */}
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm sm:text-base text-foreground">
-                              {formatPrice(getItemPrice(item) * item.quantity)}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => removeItem(item.id)}
-                              className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive rounded-lg "
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                          {/* Quantity controls */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center border rounded-lg overflow-hidden bg-background">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                                className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-primary/10"
+                              >
+                                <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+                              </Button>
+                              <div className="w-10 sm:w-12 text-center text-sm sm:text-base font-medium font-[system-ui]">
+                                {item.quantity}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-primary/10"
+                              >
+                                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                              </Button>
+                            </div>
+
+                            {/* Price and delete */}
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm sm:text-base text-foreground">
+                                {formatPrice(unitPriceWithDiscount * item.quantity)}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeItem(item.id)}
+                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))
+                    </motion.div>
+                  )
+                })
               )}
             </div>
 
-            {/* Footer with enhanced design */}
+            {/* Footer */}
             {items.length > 0 && (
               <div className="border-t bg-gradient-to-t from-primary/5 to-transparent">
                 <div className="p-4 sm:p-6 space-y-4">
@@ -215,7 +230,7 @@ export function CartSidebar({ isOpen, onClose, onCheckout }: CartSidebarProps) {
                       "w-full h-12 sm:h-12 text-base sm:text-sm font-semibold",
                       "bg-gradient-to-r from-primary",
                       "hover:from-primary/10 hover:to-primary/10",
-                      "shadow-lg hover:shadow-xl transition-all duration-200 font-[system-ui]",
+                      "shadow-lg hover:shadow-xl transition-all duration-200 font-[system-ui]"
                     )}
                     onClick={onCheckout}
                     disabled={items.length === 0}
@@ -223,7 +238,6 @@ export function CartSidebar({ isOpen, onClose, onCheckout }: CartSidebarProps) {
                     Confirmar Pedido
                   </Button>
 
-                  {/* Info text */}
                   <p className="text-xs text-center text-muted-foreground mb-7 sm:mb-0 font-[system-ui]">
                     El pago se coordina por correo electrónico
                   </p>

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
 import { Product } from "@/types/product";
+import { parsePrice } from "@/lib/parse-price";
 
 interface CartItem extends Product {
   quantity: number;
@@ -22,17 +23,24 @@ type CartAction =
   | { type: "SET_CART_OPEN"; payload: boolean }
   | { type: "LOAD_CART"; payload: CartState };
 
-const EXPIRATION_TIME = 20 * 60 * 1000; // 20 minutos en milisegundos
+const EXPIRATION_TIME = 20 * 60 * 1000;
+
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case "ADD_ITEM": {
-      const existingItem = state.items.find(item => item.id === action.payload.id);
+      // Normalizamos el precio a número puro antes de meterlo al estado
+      const sanitizedProduct = {
+        ...action.payload,
+        price: parsePrice(action.payload.price)
+      };
+
+      const existingItem = state.items.find(item => item.id === sanitizedProduct.id);
       const updatedItems = existingItem
         ? state.items.map(item =>
-            item.id === action.payload.id ? { ...item, quantity: item.quantity + 1 } : item
+            item.id === sanitizedProduct.id ? { ...item, quantity: item.quantity + 1 } : item
           )
-        : [...state.items, { ...action.payload, quantity: 1 }];
+        : [...state.items, { ...sanitizedProduct, quantity: 1 }];
 
       return { ...state, items: updatedItems, timestamp: Date.now() };
     }
@@ -81,7 +89,6 @@ const decrypt = (data: string) => JSON.parse(atob(data));
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false, timestamp: Date.now() });
 
-  // Cargar carrito desde localStorage
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
@@ -91,17 +98,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (now - parsedCart.timestamp < EXPIRATION_TIME) {
           dispatch({ type: "LOAD_CART", payload: parsedCart });
         } else {
-          console.log("Cart expired — clearing after 20 minutes");
           localStorage.removeItem("cart");
         }
       } catch {
-        console.warn("Cart corrupted or tampered. Resetting cart.");
         localStorage.removeItem("cart");
       }
     }
   }, []);
 
-  // Guardar carrito en localStorage cada vez que cambia
   useEffect(() => {
     try {
       const encrypted = encrypt(state);
@@ -118,7 +122,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const toggleCart = () => dispatch({ type: "TOGGLE_CART" });
   const openCart = () => dispatch({ type: "SET_CART_OPEN", payload: true });
   const closeCart = () => dispatch({ type: "SET_CART_OPEN", payload: false });
-  const getTotal = () => state.items.reduce((total, item) => total + item.price * item.quantity, 0);
+
+  // Asegura la suma correcta
+  const getTotal = () =>
+    state.items.reduce((total, item) => total + (parsePrice(item.price) * item.quantity), 0);
 
   return (
     <CartContext.Provider value={{

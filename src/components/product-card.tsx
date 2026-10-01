@@ -3,13 +3,21 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/hooks/cart-context";
+import { parsePrice } from "@/lib/parse-price";
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem, toggleCart } = useCart();
   const [added, setAdded] = useState(false);
 
+  // 🛠️ Obtenemos la versión numérica real del precio
+  const numericPrice = parsePrice(product?.price);
+
   const handleAdd = () => {
-    addItem(product);
+    // 🛠️ Mandamos al carrito el objeto con el precio ya sanitizado como número puro
+    addItem({
+      ...product,
+      price: numericPrice,
+    });
     toggleCart();
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -31,8 +39,9 @@ export function ProductCard({ product }: { product: any }) {
           {product.description}
         </p>
         <div className="flex items-center justify-between">
+          {/* 🛠️ Formateamos sobre numericPrice que garantizamos que es un Number */}
           <span className="text-2xl font-bold text-primary">
-            ${product.price.toLocaleString("es-AR")}
+            $ {numericPrice.toLocaleString("es-AR")}
           </span>
           <motion.div whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
             <Button
