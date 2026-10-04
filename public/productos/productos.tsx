@@ -23,6 +23,17 @@ function getDirectDriveImageUrl(url: string): string {
   return url;
 }
 
+// 🛠️ Función para procesar múltiples URLs separadas por coma
+function parseMultipleImages(rawImagesString: string): string[] {
+  if (!rawImagesString) return ["/placeholder.svg"];
+
+  return rawImagesString
+    .split(",") // Separa las URLs por la coma
+    .map((url) => url.trim()) // Quita espacios en blanco alrededor
+    .filter((url) => url.length > 0) // Elimina elementos vacíos
+    .map((url) => getDirectDriveImageUrl(url)); // Convierte a link directo de Drive
+}
+
 function parseCSVLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let cell = "";
@@ -89,8 +100,11 @@ export const getProducts = async (): Promise<Product[]> => {
       const price = parsePrice(rawPrice);
 
       const type = findVal(["type", "tipo", "categoria"]) || values[4] || "tradicional";
-      const rawImage = findVal(["image", "imagen", "foto"]) || values[5] || "/placeholder.jpg";
-      const image = getDirectDriveImageUrl(rawImage);
+      
+      // 🛠️️ Obtenemos el string de imágenes y lo procesamos a Array
+      const rawImage = findVal(["images", "imagenes", "image", "imagen", "foto"]) || values[5] || "/placeholder.jpg";
+      const images = parseMultipleImages(rawImage);
+      const image = images[0] || "/placeholder.svg"; // Mantiene la primera como fallback
 
       if (name) {
         products.push({
@@ -100,6 +114,7 @@ export const getProducts = async (): Promise<Product[]> => {
           price,
           type,
           image,
+          images, 
         });
       }
     });

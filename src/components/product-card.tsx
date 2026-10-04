@@ -1,13 +1,19 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, CheckCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { ShoppingCart, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/hooks/cart-context";
 import { parsePrice } from "@/lib/parse-price";
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem, toggleCart } = useCart();
   const [added, setAdded] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Normalizamos las imágenes: soporta tanto product.images (array) como product.image (string único)
+  const images: string[] = Array.isArray(product?.images) && product.images.length > 0
+    ? product.images
+    : [product?.image || "/placeholder.svg"];
 
   // 🛠️ Obtenemos la versión numérica real del precio
   const numericPrice = parsePrice(product?.price);
@@ -23,16 +29,75 @@ export function ProductCard({ product }: { product: any }) {
     setTimeout(() => setAdded(false), 1500);
   };
 
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
   return (
     <div className="group bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 will-change-transform mx-2">
       <div className="aspect-square bg-muted relative overflow-hidden">
-        <img
-          src={product.image || "/placeholder.svg"}
-          alt={product.name}
-          loading="lazy"
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 will-change-transform"
-        />
+        {/* Renderizado de la imagen actual con animación suave */}
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentImageIndex}
+            src={images[currentImageIndex]}
+            alt={`${product.name} - Imagen ${currentImageIndex + 1}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            loading="lazy"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform"
+          />
+        </AnimatePresence>
+
+        {/* Controles de navegación si hay más de 1 imagen */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={prevImage}
+              aria-label="Imagen anterior"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-1.5 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={nextImage}
+              aria-label="Siguiente imagen"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-1.5 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+            {/* Indicadores inferiores (Dots) */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(index);
+                  }}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    index === currentImageIndex
+                      ? "w-5 bg-white"
+                      : "w-1.5 bg-white/50 hover:bg-white/80"
+                  }`}
+                  aria-label={`Ir a la imagen ${index + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
+
       <div className="p-6">
         <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
         <p className="text-muted-foreground mb-4 text-sm font-[system-ui]">

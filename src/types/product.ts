@@ -5,4 +5,5 @@ export interface Product {
   price: number
   type: string
   image: string
+  images?: string[];
 }
