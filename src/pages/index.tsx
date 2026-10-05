@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
-import { Instagram } from "lucide-react";
 import { getProducts, sampleProducts } from "../../public/productos/productos";
 import { Product } from "@/types/product";
 import { InfiniteCarousel } from "@/components/infinite-carousel";
@@ -9,9 +8,12 @@ import { ProductCard } from "@/components/product-card";
 import { LazyMotion, domAnimation, m, useMotionValue, useTransform, animate } from "framer-motion";
 
 export default function Home() {
-  // Inicializamos en vacío para mostrar la animación/Skeleton de carga adecuadamente
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // 🏷️ Estados para categorías principales y subcategorías
+  const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("Todos");
 
   const carouselImages = [
     "/carousel-images/messi-mateando.jpg",
@@ -28,7 +30,6 @@ export default function Home() {
     };
   }, []);
 
-  // Fetch de productos desde Google Sheets
   useEffect(() => {
     let isMounted = true;
 
@@ -51,16 +52,60 @@ export default function Home() {
     };
   }, []);
 
+  // 1️⃣ Categorías principales únicas (Ej: Todos, Mate, Bombilla, Tela)
+  const mainCategories = useMemo(() => {
+    const rawCategories = products.map((p) => p.type).filter(Boolean);
+    const unique = Array.from(new Set(rawCategories));
+    return ["Todos", ...unique];
+  }, [products]);
+
+  // 2️⃣ Subcategorías disponibles según la Categoría Principal seleccionada
+  const availableSubcategories = useMemo(() => {
+    if (selectedCategory === "Todos") return [];
+
+    const filtered = products.filter(
+      (p) => p.type?.toLowerCase() === selectedCategory.toLowerCase()
+    );
+
+    const subcats = filtered
+      .map((p) => p.subcategory)
+      .filter((sub): sub is string => Boolean(sub && sub.trim() !== ""));
+
+    const uniqueSubcats = Array.from(new Set(subcats));
+    return uniqueSubcats.length > 0 ? ["Todos", ...uniqueSubcats] : [];
+  }, [products, selectedCategory]);
+
+  // 3️⃣ Reiniciar la subcategoría cuando cambia la categoría principal
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedSubcategory("Todos");
+  };
+
+  // 4️⃣ Filtrado final de productos
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchCategory =
+        selectedCategory === "Todos" ||
+        product.type?.toLowerCase() === selectedCategory.toLowerCase();
+
+      const matchSubcategory =
+        selectedSubcategory === "Todos" ||
+        product.subcategory?.toLowerCase() === selectedSubcategory.toLowerCase();
+
+      return matchCategory && matchSubcategory;
+    });
+  }, [products, selectedCategory, selectedSubcategory]);
+
   return (
     <LazyMotion features={domAnimation}>
       <m.div className="min-h-screen">
         <Header />
         <Hero />
 
-        {/* 🛍️ Productos */}
+        {/* 🛍️ Sección de Productos y Filtros */}
         <main id="productos" className="container mx-auto px-2 sm:px-4 py-20">
           <m.div
-            className="text-center mb-16"
+            className="text-center mb-10"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
@@ -74,18 +119,77 @@ export default function Home() {
             </p>
           </m.div>
 
-          {/* 🧉 Grid de productos o Skeletons */}
+          {!loading && (
+            <div className="space-y-4 mb-12">
+              {/* Nivel 1: Categorías Principales */}
+              <m.div
+                className="flex flex-wrap justify-center gap-2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {mainCategories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => handleCategoryChange(category)}
+                    className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 font-[system-ui] ${
+                      selectedCategory.toLowerCase() === category.toLowerCase()
+                        ? "bg-primary text-primary-foreground shadow-md scale-105"
+                        : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </m.div>
+
+              {/* Nivel 2: Subcategorías (Se muestra solo si hay subcategorías para la categoría elegida) */}
+              {availableSubcategories.length > 0 && (
+                <m.div
+                  className="flex flex-wrap justify-center gap-2 pt-2 border-t border-muted/50 max-w-2xl mx-auto"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {availableSubcategories.map((subcat) => (
+                    <button
+                      key={subcat}
+                      onClick={() => setSelectedSubcategory(subcat)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-300 font-[system-ui] ${
+                        selectedSubcategory.toLowerCase() === subcat.toLowerCase()
+                          ? "bg-primary/20 text-primary border border-primary/40 font-bold"
+                          : "bg-background text-muted-foreground border border-muted hover:bg-muted/50"
+                      }`}
+                    >
+                      {subcat}
+                    </button>
+                  ))}
+                </m.div>
+              )}
+            </div>
+          )}
+
+          {/* 🧉 Grid de Productos */}
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="h-96 bg-muted/40 rounded-2xl animate-pulse" />
               ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+          ) : filteredProducts.length > 0 ? (
+            <m.div
+              layout
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full"
+            >
+              {filteredProducts.map((product) => (
+                <m.div key={product.id} layout transition={{ duration: 0.4 }}>
+                  <ProductCard product={product} />
+                </m.div>
               ))}
+            </m.div>
+          ) : (
+            <div className="text-center py-16 text-muted-foreground">
+              No hay productos disponibles para los filtros seleccionados.
             </div>
           )}
         </main>
@@ -240,7 +344,6 @@ export default function Home() {
   );
 }
 
-// Numbers animados
 function AnimatedNumber({ value }: { value: number }) {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => Math.floor(latest));

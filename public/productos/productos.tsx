@@ -23,15 +23,14 @@ function getDirectDriveImageUrl(url: string): string {
   return url;
 }
 
-// 🛠️ Función para procesar múltiples URLs separadas por coma
 function parseMultipleImages(rawImagesString: string): string[] {
   if (!rawImagesString) return ["/placeholder.svg"];
 
   return rawImagesString
-    .split(",") // Separa las URLs por la coma
-    .map((url) => url.trim()) // Quita espacios en blanco alrededor
-    .filter((url) => url.length > 0) // Elimina elementos vacíos
-    .map((url) => getDirectDriveImageUrl(url)); // Convierte a link directo de Drive
+    .split(",")
+    .map((url) => url.trim())
+    .filter((url) => url.length > 0)
+    .map((url) => getDirectDriveImageUrl(url));
 }
 
 function parseCSVLine(line: string, delimiter: string): string[] {
@@ -94,17 +93,18 @@ export const getProducts = async (): Promise<Product[]> => {
 
       const name = findVal(["name", "nombre", "product", "producto"]) || values[1];
       const description = findVal(["description", "descripcion", "detalle"]) || values[2] || "";
-      
-      // Sanitizamos el precio crudo que viene desde la hoja de cálculo
       const rawPrice = findVal(["price", "precio", "valor"]) || values[3] || "0";
       const price = parsePrice(rawPrice);
 
-      const type = findVal(["type", "tipo", "categoria"]) || values[4] || "tradicional";
+      // 🛠️️ Categoría principal (Ej: Mate, Bombilla, Tela)
+      const type = findVal(["category", "categoria", "type", "tipo", "material"]) || values[4] || "Otros";
       
-      // 🛠️️ Obtenemos el string de imágenes y lo procesamos a Array
+      // 🛠️ Subcategoría (Ej: Mate Imperial, Mate Torpedo, Pico Loro)
+      const subcategory = findVal(["subcategory", "subcategoria", "subtipo"]) || "";
+
       const rawImage = findVal(["images", "imagenes", "image", "imagen", "foto"]) || values[5] || "/placeholder.jpg";
       const images = parseMultipleImages(rawImage);
-      const image = images[0] || "/placeholder.svg"; // Mantiene la primera como fallback
+      const image = images[0] || "/placeholder.svg";
 
       if (name) {
         products.push({
@@ -113,8 +113,9 @@ export const getProducts = async (): Promise<Product[]> => {
           description,
           price,
           type,
+          subcategory, 
           image,
-          images, 
+          images,
         });
       }
     });
