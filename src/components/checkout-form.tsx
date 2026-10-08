@@ -6,16 +6,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Mail, User, MapPin, CheckCircle, Phone, Loader2, Package } from "lucide-react"
+import { ArrowLeft, Mail, User, MapPin, CheckCircle, Phone, Package, MessageCircle } from "lucide-react"
 import { useCart } from "@/hooks/cart-context"
 import { toast } from "sonner"
-import emailjs from "@emailjs/browser"
 import { cn } from "@/lib/utils"
 import { Header } from "@/components/header"
 
 interface CheckoutFormProps {
   onBack: () => void
 }
+
+// 📱 CONFIGURACIÓN: Tu número de WhatsApp con código de país (Ej: Argentina +54 9 1161706060 -> 5491161706060)
+const WHATSAPP_PHONE_NUMBER = "541127082987"
 
 export function CheckoutForm({ onBack }: CheckoutFormProps) {
   const { items, clearCart } = useCart()
@@ -25,7 +27,6 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
     phone: "",
     address: "",
   })
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -34,13 +35,6 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
   const getItemPrice = (item: any) => (item.quantity >= 5 ? item.price * 0.7 : item.price)
 
   const total = items.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0)
-
-  const totalSavings = items.reduce((sum, item) => {
-    if (item.quantity >= 5) {
-      return sum + (item.price - getItemPrice(item)) * item.quantity
-    }
-    return sum
-  }, 0)
 
   const formatPrice = (amount: number) =>
     new Intl.NumberFormat("es-AR", {
@@ -74,7 +68,7 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm()) {
@@ -82,34 +76,32 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
       return
     }
 
-    setIsSubmitting(true)
+    // 📝 1. Armamos el detalle de los productos
+    const itemsListText = items
+      .map(
+        (i) =>
+          `• *${i.name}* x${i.quantity} - ${formatPrice(getItemPrice(i) * i.quantity)}${
+            i.quantity >= 5 ? " _(Desc. Mayorista)_" : ""
+          }`
+      )
+      .join("\n")
 
-    try {
-      const templateParams = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        items: items
-          .map(
-            (i) =>
-              `${i.name} x${i.quantity} - ${formatPrice(getItemPrice(i))} ${i.quantity >= 5 ? "(Mayorista -30%)" : ""}`,
-          )
-          .join(", "),
-        total: formatPrice(total),
-      }
+    // 💬 2. Armamos el mensaje completo formateado para WhatsApp
+    const message = `*¡NUEVO PEDIDO DESDE LA WEB!* 🧉\n\n` +
+      `*Cliente:* ${formData.name}\n` +
+      `*Teléfono:* ${formData.phone}\n` +
+      `*Email:* ${formData.email}\n` +
+      `*Dirección:* ${formData.address}\n\n` +
+      `*DETALLE DEL PEDIDO:*\n${itemsListText}\n\n` +
+      `*TOTAL:* ${formatPrice(total)}`
 
-      await emailjs.send("service_wav5fsj", "template_amenbz9", templateParams, "UUWrV55n6pCMnFoQk")
+    // 🔗 3. Abrimos la URL de WhatsApp
+    const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE_NUMBER}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, "_blank")
 
-      setIsSuccess(true)
-      clearCart()
-      toast.success("¡Pedido enviado exitosamente!")
-    } catch (error) {
-      console.error(error)
-      toast.error("Error al enviar el pedido. Intenta nuevamente.")
-    } finally {
-      setIsSubmitting(false)
-    }
+    setIsSuccess(true)
+    clearCart()
+    toast.success("¡Pedido enviado a WhatsApp!")
   }
 
   if (isSuccess) {
@@ -118,44 +110,36 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
         <Header />
         <div className="min-h-screen w-full flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="w-full max-w-xl text-center">
-            {/* Icono de confirmación */}
             <div className="mb-6 flex justify-center">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-green-100 flex items-center justify-center animate-bounce">
                 <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-green-500" />
               </div>
             </div>
 
-            {/* Título */}
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-foreground">
               ¡Gracias por tu pedido!
             </h1>
 
-            {/* Descripción */}
             <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-8 text-muted-foreground font-[system-ui]">
-              Tu pedido ha sido recibido y será procesado pronto.
+              Se ha abierto una pestaña de WhatsApp con los detalles de tu pedido.
             </p>
 
-            {/* Card con próximos pasos */}
             <Card className="mb-6 sm:mb-8 border-primary/20 shadow-lg">
               <CardContent className="p-4 sm:p-6 md:p-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-left">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg sm:text-xl mb-2 font-[system-ui]">Próximos pasos:</h3>
+                    <h3 className="font-semibold text-lg sm:text-xl mb-2 font-[system-ui]">Coordinación directa:</h3>
                     <p className="text-xs sm:text-sm md:text-base text-muted-foreground leading-relaxed font-[system-ui]">
-                      El seguimiento de tu pedido y la coordinación del pago se realizará por correo electrónico.
-                    </p>
-                    <p className="text-xs sm:text-sm md:text-base text-muted-foreground leading-relaxed font-[system-ui] mt-2">
-                      Revisa tu bandeja de entrada en los próximos minutos.
+                      Presiona enviar en el chat de WhatsApp para ponernos en contacto y coordinar la entrega y el pago.
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Botón volver */}
             <Button
               onClick={onBack}
               size="lg"
@@ -166,7 +150,7 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                 "shadow-lg hover:shadow-xl transition-all duration-200 font-[system-ui]"
               )}
             >
-              Volver
+              Volver al Inicio
             </Button>
           </div>
         </div>
@@ -189,7 +173,7 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 max-w-6xl mx-auto w-full flex-1">
           {/* Información personal */}
-          <Card className="order-1 lg:order-1 border-primary/20 shadow-md bg-card h-fit  overflow-y-auto">
+          <Card className="order-1 lg:order-1 border-primary/20 shadow-md bg-card h-fit overflow-y-auto">
             <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 p-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -199,7 +183,6 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
               </div>
             </CardHeader>
             <CardContent className="p-3 sm:p-4">
-              {/* Formulario */}
               <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 {/* Nombre */}
                 <div className="space-y-1">
@@ -281,13 +264,12 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                   {errors.address && <p className="text-xs text-destructive font-[system-ui]">{errors.address}</p>}
                 </div>
 
-                {/* Submit */}
+                {/* Submit por WhatsApp */}
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 text-sm sm:text-base font-semibold mt-4 font-[system-ui]"
-                  disabled={isSubmitting}
+                  className="w-full h-10 sm:h-11 text-sm sm:text-base font-semibold mt-4 font-[system-ui] bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando Pedido...</> : "Confirmar Pedido"}
+                  <MessageCircle className="w-5 h-5" /> Enviar Pedido por WhatsApp
                 </Button>
               </form>
             </CardContent>
@@ -332,8 +314,8 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                 <span className="text-xl font-bold text-foreground">{formatPrice(total)}</span>
               </div>
 
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-2 text-center text-sm text-muted-foreground font-[system-ui]">
-                El pago se coordina por correo electrónico
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center text-sm text-green-700 font-[system-ui]">
+                El pedido se enviará directamente a nuestro WhatsApp
               </div>
             </CardContent>
           </Card>
