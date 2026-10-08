@@ -11,9 +11,11 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // 🏷️ Estados para categorías principales y subcategorías
-  const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("Todos");
+  // 🏷️ Estados para las 4 Categorías Dinámicas
+  const [cat1, setCat1] = useState<string>("Todos");
+  const [cat2, setCat2] = useState<string>("Todos");
+  const [cat3, setCat3] = useState<string>("Todos");
+  const [cat4, setCat4] = useState<string>("Todos");
 
   const carouselImages = [
     "/carousel-images/messi-mateando.jpg",
@@ -52,49 +54,63 @@ export default function Home() {
     };
   }, []);
 
-  // 1️⃣ Categorías principales únicas (Ej: Todos, Mate, Bombilla, Tela)
-  const mainCategories = useMemo(() => {
-    const rawCategories = products.map((p) => p.type).filter(Boolean);
-    const unique = Array.from(new Set(rawCategories));
-    return ["Todos", ...unique];
+  // 1️⃣ Opciones Nivel 1 (1raCATEGORIA)
+  const listCat1 = useMemo(() => {
+    const raw = products.map((p) => p.cat1 || p.type).filter(Boolean);
+    return ["Todos", ...Array.from(new Set(raw))];
   }, [products]);
 
-  // 2️⃣ Subcategorías disponibles según la Categoría Principal seleccionada
-  const availableSubcategories = useMemo(() => {
-    if (selectedCategory === "Todos") return [];
+  // 2️⃣ Opciones Nivel 2 (2daCATEGORIA)
+  const listCat2 = useMemo(() => {
+    if (cat1 === "Todos") return [];
+    const filtered = products.filter((p) => (p.cat1 || p.type)?.toLowerCase() === cat1.toLowerCase());
+    const raw = filtered.map((p) => p.cat2 || p.subcategory).filter((val): val is string => Boolean(val && val.trim() !== ""));
+    const unique = Array.from(new Set(raw));
+    return unique.length > 0 ? ["Todos", ...unique] : [];
+  }, [products, cat1]);
 
+  // 3️⃣ Opciones Nivel 3 (3raCATEGORIA)
+  const listCat3 = useMemo(() => {
+    if (cat1 === "Todos" || cat2 === "Todos") return [];
     const filtered = products.filter(
-      (p) => p.type?.toLowerCase() === selectedCategory.toLowerCase()
+      (p) =>
+        (p.cat1 || p.type)?.toLowerCase() === cat1.toLowerCase() &&
+        (p.cat2 || p.subcategory)?.toLowerCase() === cat2.toLowerCase()
     );
+    const raw = filtered.map((p) => p.cat3).filter((val): val is string => Boolean(val && val.trim() !== ""));
+    const unique = Array.from(new Set(raw));
+    return unique.length > 0 ? ["Todos", ...unique] : [];
+  }, [products, cat1, cat2]);
 
-    const subcats = filtered
-      .map((p) => p.subcategory)
-      .filter((sub): sub is string => Boolean(sub && sub.trim() !== ""));
-
-    const uniqueSubcats = Array.from(new Set(subcats));
-    return uniqueSubcats.length > 0 ? ["Todos", ...uniqueSubcats] : [];
-  }, [products, selectedCategory]);
-
-  // 3️⃣ Reiniciar la subcategoría cuando cambia la categoría principal
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-    setSelectedSubcategory("Todos");
+  // Handlers para reiniciar subniveles cuando cambia el nivel superior
+  const handleCat1Change = (val: string) => {
+    setCat1(val);
+    setCat2("Todos");
+    setCat3("Todos");
+    setCat4("Todos");
   };
 
-  // 4️⃣ Filtrado final de productos
+  const handleCat2Change = (val: string) => {
+    setCat2(val);
+    setCat3("Todos");
+    setCat4("Todos");
+  };
+
+  const handleCat3Change = (val: string) => {
+    setCat3(val);
+    setCat4("Todos");
+  };
+
+  // 🔍 Filtrado final combinando los 4 niveles
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchCategory =
-        selectedCategory === "Todos" ||
-        product.type?.toLowerCase() === selectedCategory.toLowerCase();
+    return products.filter((p) => {
+      const match1 = cat1 === "Todos" || (p.cat1 || p.type)?.toLowerCase() === cat1.toLowerCase();
+      const match2 = cat2 === "Todos" || (p.cat2 || p.subcategory)?.toLowerCase() === cat2.toLowerCase();
+      const match3 = cat3 === "Todos" || p.cat3?.toLowerCase() === cat3.toLowerCase();
 
-      const matchSubcategory =
-        selectedSubcategory === "Todos" ||
-        product.subcategory?.toLowerCase() === selectedSubcategory.toLowerCase();
-
-      return matchCategory && matchSubcategory;
+      return match1 && match2 && match3;
     });
-  }, [products, selectedCategory, selectedSubcategory]);
+  }, [products, cat1, cat2, cat3]);
 
   return (
     <LazyMotion features={domAnimation}>
@@ -121,47 +137,58 @@ export default function Home() {
 
           {!loading && (
             <div className="space-y-4 mb-12">
-              {/* Nivel 1: Categorías Principales */}
-              <m.div
-                className="flex flex-wrap justify-center gap-2"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                {mainCategories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => handleCategoryChange(category)}
-                    className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 font-[system-ui] ${
-                      selectedCategory.toLowerCase() === category.toLowerCase()
-                        ? "bg-primary text-primary-foreground shadow-md scale-105"
-                        : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </m.div>
-
-              {/* Nivel 2: Subcategorías (Se muestra solo si hay subcategorías para la categoría elegida) */}
-              {availableSubcategories.length > 0 && (
-                <m.div
-                  className="flex flex-wrap justify-center gap-2 pt-2 border-t border-muted/50 max-w-2xl mx-auto"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {availableSubcategories.map((subcat) => (
+              {/* Nivel 1 */}
+              {listCat1.length > 1 && (
+                <m.div className="flex flex-wrap justify-center gap-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                  {listCat1.map((item) => (
                     <button
-                      key={subcat}
-                      onClick={() => setSelectedSubcategory(subcat)}
+                      key={item}
+                      onClick={() => handleCat1Change(item)}
+                      className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 font-[system-ui] ${
+                        cat1.toLowerCase() === item.toLowerCase()
+                          ? "bg-primary text-primary-foreground shadow-md scale-105"
+                          : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </m.div>
+              )}
+
+              {/* Nivel 2 */}
+              {listCat2.length > 0 && (
+                <m.div className="flex flex-wrap justify-center gap-2 pt-2 border-t border-muted/50 max-w-2xl mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  {listCat2.map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => handleCat2Change(item)}
                       className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-300 font-[system-ui] ${
-                        selectedSubcategory.toLowerCase() === subcat.toLowerCase()
+                        cat2.toLowerCase() === item.toLowerCase()
                           ? "bg-primary/20 text-primary border border-primary/40 font-bold"
                           : "bg-background text-muted-foreground border border-muted hover:bg-muted/50"
                       }`}
                     >
-                      {subcat}
+                      {item}
+                    </button>
+                  ))}
+                </m.div>
+              )}
+
+              {/* Nivel 3 */}
+              {listCat3.length > 0 && (
+                <m.div className="flex flex-wrap justify-center gap-2 pt-1 max-w-2xl mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  {listCat3.map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => handleCat3Change(item)}
+                      className={`px-3 py-1 rounded-full text-xs font-normal transition-all duration-300 font-[system-ui] ${
+                        cat3.toLowerCase() === item.toLowerCase()
+                          ? "bg-primary/30 text-primary font-semibold"
+                          : "bg-muted/30 text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {item}
                     </button>
                   ))}
                 </m.div>
@@ -177,10 +204,7 @@ export default function Home() {
               ))}
             </div>
           ) : filteredProducts.length > 0 ? (
-            <m.div
-              layout
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full"
-            >
+            <m.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
               {filteredProducts.map((product) => (
                 <m.div key={product.id} layout transition={{ duration: 0.4 }}>
                   <ProductCard product={product} />

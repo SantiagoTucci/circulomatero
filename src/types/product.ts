@@ -5,6 +5,9 @@ export interface Product {
   price: number;
   type: string;
   subcategory?: string;
+  cat1?: string;
+  cat2?: string;
+  cat3?: string;
   image: string;
   images?: string[];
 }

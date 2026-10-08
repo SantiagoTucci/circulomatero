@@ -96,13 +96,17 @@ export const getProducts = async (): Promise<Product[]> => {
       const rawPrice = findVal(["price", "precio", "valor"]) || values[3] || "0";
       const price = parsePrice(rawPrice);
 
-      // 🛠️️ Categoría principal (Ej: Mate, Bombilla, Tela)
-      const type = findVal(["category", "categoria", "type", "tipo", "material"]) || values[4] || "Otros";
-      
-      // 🛠️ Subcategoría (Ej: Mate Imperial, Mate Torpedo, Pico Loro)
-      const subcategory = findVal(["subcategory", "subcategoria", "subtipo"]) || "";
+      // 🛠️ Mapeo de las 3 Categorías desde el Google Sheet
+      const cat1 = findVal(["1racategoria", "1acategoria", "categoria1", "category1", "type", "tipo"]) || values[4] || "Otros";
+      const cat2 = findVal(["2dacategoria", "2acategoria", "categoria2", "category2", "subcategoria", "subcategory"]) || values[5] || "";
+      const cat3 = findVal(["3racategoria", "3acategoria", "3tacategoria", "categoria3", "category3"]) || values[6] || "";
 
-      const rawImage = findVal(["images", "imagenes", "image", "imagen", "foto"]) || values[5] || "/placeholder.jpg";
+      // Mantenemos retrocompatibilidad con 'type' y 'subcategory'
+      const type = cat1;
+      const subcategory = cat2;
+
+      // La columna de imágenes queda como la 8va columna (índice 7) o por nombre
+      const rawImage = findVal(["images", "imagenes", "image", "imagen", "foto"]) || values[7] || "/placeholder.jpg";
       const images = parseMultipleImages(rawImage);
       const image = images[0] || "/placeholder.svg";
 
@@ -113,7 +117,10 @@ export const getProducts = async (): Promise<Product[]> => {
           description,
           price,
           type,
-          subcategory, 
+          subcategory,
+          cat1,
+          cat2,
+          cat3,
           image,
           images,
         });
