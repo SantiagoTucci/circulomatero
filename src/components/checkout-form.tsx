@@ -17,7 +17,7 @@ interface CheckoutFormProps {
 }
 
 // 📱 CONFIGURACIÓN: Tu número de WhatsApp con código de país (Ej: Argentina +54 9 1161706060 -> 5491161706060)
-const WHATSAPP_PHONE_NUMBER = "541127082987"
+const WHATSAPP_PHONE_NUMBER = "5491171812001"
 
 export function CheckoutForm({ onBack }: CheckoutFormProps) {
   const { items, clearCart } = useCart()
@@ -87,7 +87,7 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
       .join("\n")
 
     // 💬 2. Armamos el mensaje completo formateado para WhatsApp
-    const message = `*¡NUEVO PEDIDO DESDE LA WEB!* 🧉\n\n` +
+    const message = `*Pedido desde la Web!* 🧉\n\n` +
       `*Cliente:* ${formData.name}\n` +
       `*Teléfono:* ${formData.phone}\n` +
       `*Email:* ${formData.email}\n` +
