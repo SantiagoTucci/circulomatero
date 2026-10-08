@@ -161,39 +161,39 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
   return (
     <>
       <Header />
-      <div className="mt-16 w-full p-3 lg:p-6 flex flex-col overflow-auto">
+      <div className="mt-16 w-full p-4 sm:p-6 flex flex-col overflow-auto">
         <Button
           variant="ghost"
           onClick={() => navigate("/inicio")}
-          className="mb-3 sm:mb-4 self-start hover:bg-primary text-sm font-[system-ui]"
+          className="mb-4 self-start hover:bg-primary text-sm font-[system-ui]"
         >
-          <ArrowLeft className="h-3 w-3 mr-2" />
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Volver
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 max-w-6xl mx-auto w-full flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto w-full flex-1">
           {/* Información personal */}
           <Card className="order-1 lg:order-1 border-primary/20 shadow-md bg-card h-fit overflow-y-auto">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary" />
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 p-4 sm:p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-primary" />
                 </div>
-                <CardTitle className="text-lg sm:text-xl">Información de Contacto</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">Información de Contacto</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-3 sm:p-4">
-              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+            <CardContent className="p-4 sm:p-5">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 {/* Nombre */}
-                <div className="space-y-1">
-                  <Label htmlFor="name" className="text-sm font-[system-ui]">Nombre Completo</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm sm:text-base font-[system-ui]">Nombre Completo</Label>
                   <div className="relative">
-                    <User className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="name"
                       type="text"
                       placeholder="Tu nombre completo"
-                      className={cn("pl-9 h-9 text-sm font-[system-ui]", errors.name && "border-destructive focus-visible:ring-destructive")}
+                      className={cn("pl-11 h-12 sm:h-11 text-base font-[system-ui]", errors.name && "border-destructive focus-visible:ring-destructive")}
                       value={formData.name}
                       onChange={(e) => {
                         setFormData(prev => ({ ...prev, name: e.target.value }))
@@ -201,19 +201,19 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                       }}
                     />
                   </div>
-                  {errors.name && <p className="text-xs text-destructive font-[system-ui]">{errors.name}</p>}
+                  {errors.name && <p className="text-sm text-destructive font-[system-ui]">{errors.name}</p>}
                 </div>
 
                 {/* Email */}
-                <div className="space-y-1">
-                  <Label htmlFor="email" className="text-sm font-[system-ui]">Correo Electrónico</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm sm:text-base font-[system-ui]">Correo Electrónico</Label>
                   <div className="relative">
-                    <Mail className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
                       placeholder="tu@email.com"
-                      className={cn("pl-9 h-9 text-sm font-[system-ui]", errors.email && "border-destructive focus-visible:ring-destructive")}
+                      className={cn("pl-11 h-12 sm:h-11 text-base font-[system-ui]", errors.email && "border-destructive focus-visible:ring-destructive")}
                       value={formData.email}
                       onChange={(e) => {
                         setFormData(prev => ({ ...prev, email: e.target.value }))
@@ -221,19 +221,19 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                       }}
                     />
                   </div>
-                  {errors.email && <p className="text-xs text-destructive font-[system-ui]">{errors.email}</p>}
+                  {errors.email && <p className="text-sm text-destructive font-[system-ui]">{errors.email}</p>}
                 </div>
 
                 {/* Teléfono */}
-                <div className="space-y-1">
-                  <Label htmlFor="phone" className="text-sm font-[system-ui]">Número de Teléfono</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-sm sm:text-base font-[system-ui]">Número de Teléfono</Label>
                   <div className="relative">
-                    <Phone className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="phone"
                       type="tel"
                       placeholder="+54 11 1234-5678"
-                      className={cn("pl-9 h-9 text-sm font-[system-ui]", errors.phone && "border-destructive focus-visible:ring-destructive")}
+                      className={cn("pl-11 h-12 sm:h-11 text-base font-[system-ui]", errors.phone && "border-destructive focus-visible:ring-destructive")}
                       value={formData.phone}
                       onChange={(e) => {
                         setFormData(prev => ({ ...prev, phone: e.target.value }))
@@ -241,19 +241,19 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                       }}
                     />
                   </div>
-                  {errors.phone && <p className="text-xs text-destructive font-[system-ui]">{errors.phone}</p>}
+                  {errors.phone && <p className="text-sm text-destructive font-[system-ui]">{errors.phone}</p>}
                 </div>
 
                 {/* Dirección */}
-                <div className="space-y-1">
-                  <Label htmlFor="address" className="text-sm font-[system-ui]">Dirección de Entrega</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-sm sm:text-base font-[system-ui]">Dirección de Entrega</Label>
                   <div className="relative">
-                    <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="address"
                       type="text"
                       placeholder="Calle, número, ciudad"
-                      className={cn("pl-9 h-9 text-sm font-[system-ui]", errors.address && "border-destructive focus-visible:ring-destructive")}
+                      className={cn("pl-11 h-12 sm:h-11 text-base font-[system-ui]", errors.address && "border-destructive focus-visible:ring-destructive")}
                       value={formData.address}
                       onChange={(e) => {
                         setFormData(prev => ({ ...prev, address: e.target.value }))
@@ -261,15 +261,15 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                       }}
                     />
                   </div>
-                  {errors.address && <p className="text-xs text-destructive font-[system-ui]">{errors.address}</p>}
+                  {errors.address && <p className="text-sm text-destructive font-[system-ui]">{errors.address}</p>}
                 </div>
 
                 {/* Submit por WhatsApp */}
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 text-sm sm:text-base font-semibold mt-4 font-[system-ui] bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+                  className="w-full h-14 sm:h-12 text-base sm:text-lg font-semibold mt-6 font-[system-ui] bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all"
                 >
-                  <MessageCircle className="w-5 h-5" /> Enviar Pedido por WhatsApp
+                  <MessageCircle className="w-6 h-6" /> Enviar Pedido por WhatsApp
                 </Button>
               </form>
             </CardContent>
@@ -277,44 +277,44 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
 
           {/* Resumen del pedido */}
           <Card className="order-2 lg:order-2 border-primary/20 bg-card lg:sticky lg:top-4 mb-10 sm:mb-0">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 p-3 rounded-t-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Package className="w-4 h-4 text-primary" />
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 p-4 sm:p-5 rounded-t-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-primary" />
                 </div>
-                <CardTitle className="text-lg sm:text-xl">Resumen del Pedido</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">Resumen del Pedido</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-3 sm:p-4 space-y-3">
-              <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2 scrollbar-thin">
+            <CardContent className="p-4 sm:p-5 space-y-4">
+              <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3 scrollbar-thin">
                 {items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 text-sm transition-colors">
+                  <div key={item.id} className="flex items-center gap-3 sm:gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 text-sm sm:text-base transition-colors">
                     {item.image && (
-                      <div className="relative w-12 h-12 sm:w-16 sm:h-15 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                      <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
                         <img src={item.image || "/placeholder.svg"} alt={item.name} className="w-full h-full object-cover" />
                         {item.quantity >= 5 && (
-                          <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-1 py-0.5 rounded-bl">-30%</div>
+                          <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">-30%</div>
                         )}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold truncate">{item.name}</h4>
-                      <p className="text-xs text-muted-foreground font-[system-ui]">{item.quantity} x {formatPrice(getItemPrice(item))}</p>
-                      {item.quantity >= 5 && <p className="text-xs font-medium text-green-600">Precio mayorista</p>}
+                      <h4 className="font-semibold truncate text-base">{item.name}</h4>
+                      <p className="text-sm text-muted-foreground font-[system-ui]">{item.quantity} x {formatPrice(getItemPrice(item))}</p>
+                      {item.quantity >= 5 && <p className="text-sm font-medium text-green-600">Precio mayorista</p>}
                     </div>
-                    <span className="font-bold text-sm">{formatPrice(getItemPrice(item) * item.quantity)}</span>
+                    <span className="font-bold text-base">{formatPrice(getItemPrice(item) * item.quantity)}</span>
                   </div>
                 ))}
               </div>
 
               <Separator />
 
-              <div className="flex justify-between items-center py-1.5">
-                <span className="text-xl font-semibold text-muted-foreground">Total:</span>
-                <span className="text-xl font-bold text-foreground">{formatPrice(total)}</span>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-2xl font-semibold text-muted-foreground">Total:</span>
+                <span className="text-2xl font-bold text-foreground">{formatPrice(total)}</span>
               </div>
 
-              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center text-sm text-green-700 font-[system-ui]">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center text-sm sm:text-base text-green-700 font-[system-ui]">
                 El pedido se enviará directamente a nuestro WhatsApp
               </div>
             </CardContent>
