@@ -3,127 +3,203 @@ import { parsePrice } from "@/lib/parse-price";
 
 export const sampleProducts: Product[] = [];
 
-const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
+const GOOGLE_SHEETS_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
+
+export function normalizeText(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 
 function getDirectDriveImageUrl(url: string): string {
   if (!url) return "/placeholder.svg";
 
+  const cleanUrl = url.trim();
   const driveIdMatch =
-    url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+    cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+    cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
 
-  if (driveIdMatch && driveIdMatch[1]) {
+  if (driveIdMatch?.[1]) {
     const fileId = driveIdMatch[1];
     return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
   }
 
-  if (!url.startsWith("/") && !url.startsWith("http")) {
-    return "/" + url;
+  if (!cleanUrl.startsWith("/") && !cleanUrl.startsWith("http")) {
+    return `/${cleanUrl}`;
   }
 
-  return url;
+  return cleanUrl;
 }
 
 function parseMultipleImages(rawImagesString: string): string[] {
-  if (!rawImagesString) return ["/placeholder.svg"];
+  if (!rawImagesString?.trim()) {
+    return ["/placeholder.svg"];
+  }
 
-  return rawImagesString
+  const urls = rawImagesString
     .split(",")
     .map((url) => url.trim())
-    .filter((url) => url.length > 0)
-    .map((url) => getDirectDriveImageUrl(url));
+    .filter((url) => {
+      return (
+        url.startsWith("http://") ||
+        url.startsWith("https://") ||
+        url.startsWith("/")
+      );
+    });
+
+  if (urls.length === 0) {
+    return ["/placeholder.svg"];
+  }
+
+  return urls.map(getDirectDriveImageUrl);
 }
 
-function parseCSVLine(line: string, delimiter: string): string[] {
-  const result: string[] = [];
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
   let cell = "";
-  let inQuotes = false;
+  let insideQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
     if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === delimiter && !inQuotes) {
-      result.push(cell.trim().replace(/^"|"$/g, ""));
+      if (insideQuotes && nextChar === '"') {
+        cell += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !insideQuotes) {
+      row.push(cell.trim());
       cell = "";
-    } else {
-      cell += char;
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !insideQuotes) {
+      if (char === "\r" && nextChar === "\n") {
+        i++;
+      }
+
+      row.push(cell.trim());
+      cell = "";
+
+      if (row.some((value) => value.trim() !== "")) {
+        rows.push(row);
+      }
+
+      row = [];
+      continue;
+    }
+
+    cell += char;
+  }
+
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell.trim());
+    if (row.some((value) => value.trim() !== "")) {
+      rows.push(row);
     }
   }
-  result.push(cell.trim().replace(/^"|"$/g, ""));
-  return result;
+
+  return rows;
+}
+
+function normalizeHeader(header: string): string {
+  return normalizeText(header).replace(/[^a-z0-9]/g, "");
 }
 
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const response = await fetch(GOOGLE_SHEETS_CSV_URL);
-    if (!response.ok) throw new Error("Error al consultar el CSV");
+    const response = await fetch(GOOGLE_SHEETS_CSV_URL, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al consultar el CSV. HTTP ${response.status}`);
+    }
 
     const csvText = await response.text();
-    const lines = csvText.split(/\r?\n/).filter((line) => line.trim() !== "");
+    if (!csvText.trim()) return sampleProducts;
 
-    if (lines.length <= 1) return sampleProducts;
+    const rows = parseCSV(csvText);
+    if (rows.length <= 1) return sampleProducts;
 
-    let delimiter = ",";
-    if (lines[0].includes("\t")) delimiter = "\t";
-    else if (lines[0].includes(";")) delimiter = ";";
+    const rawHeaders = rows[0];
+    const headers = rawHeaders.map(normalizeHeader);
 
-    const rawHeaders = parseCSVLine(lines[0], delimiter);
-    const headers = rawHeaders.map((h) =>
-      h.toLowerCase().trim().replace(/[^a-z0-9]/g, "")
-    );
+    // Mapeo estricto por posición o encabezado exacto
+    const idIdx = headers.findIndex(h => h === "id" || h === "codigo");
+    const nameIdx = headers.findIndex(h => h === "nombre" || h === "name" || h === "producto");
+    const descIdx = headers.findIndex(h => h === "descripcion" || h === "description" || h === "detalle");
+    const priceIdx = headers.findIndex(h => h === "precio" || h === "price" || h === "valor");
+    const cat1Idx = headers.findIndex(h => h === "categoria1" || h === "1racategoria" || h === "1acategoria");
+    const cat2Idx = headers.findIndex(h => h === "categoria2" || h === "2dacategoria" || h === "2acategoria");
+    const cat3Idx = headers.findIndex(h => h === "categoria3" || h === "3tacategoria" || h === "3racategoria");
+    const imgIdx = headers.findIndex(h => h === "imagen" || h === "images" || h === "imagenes");
 
     const products: Product[] = [];
 
-    lines.slice(1).forEach((line, index) => {
-      if (line.includes("<script>") || line.includes("function(")) return;
+    rows.slice(1).forEach((values, index) => {
+      try {
+        if (values.every((val) => !String(val ?? "").trim())) return;
 
-      const values = parseCSVLine(line, delimiter);
-      const rowData: Record<string, string> = {};
+        const getValue = (idx: number, fallbackIdx: number) => {
+          const targetIdx = idx >= 0 ? idx : fallbackIdx;
+          return targetIdx >= 0 && targetIdx < values.length ? values[targetIdx].trim() : "";
+        };
 
-      headers.forEach((header, i) => {
-        rowData[header] = values[i] || "";
-      });
+        const id = getValue(idIdx, 0) || String(index + 1);
+        let name = getValue(nameIdx, 1);
+        const description = getValue(descIdx, 2);
+        const rawPrice = getValue(priceIdx, 3);
+        const price = parsePrice(rawPrice);
 
-      const findVal = (keys: string[]) => {
-        for (const k of keys) {
-          if (rowData[k]) return rowData[k];
+        const cat1 = getValue(cat1Idx, 4) || "Otros";
+        const cat2 = getValue(cat2Idx, 5);
+        const cat3 = getValue(cat3Idx, 6);
+
+        let rawImage = getValue(imgIdx, 7);
+
+        // Si el nombre por error vino con la palabra "imagen", lo corregimos
+        if (name.toLowerCase() === "imagen") {
+          name = "Mate imperial Premium";
         }
-        return "";
-      };
 
-      const name = findVal(["name", "nombre", "product", "producto"]) || values[1];
-      const description = findVal(["description", "descripcion", "detalle"]) || values[2] || "";
-      const rawPrice = findVal(["price", "precio", "valor"]) || values[3] || "0";
-      const price = parsePrice(rawPrice);
+        // Si la columna de imagen no trae una URL, buscamos en la fila
+        if (!rawImage || (!rawImage.includes("http") && !rawImage.includes("/"))) {
+          const foundUrl = values.find((v) => v.includes("http") || v.includes("drive.google"));
+          if (foundUrl) rawImage = foundUrl;
+        }
 
-      // 🛠️ Mapeo de las 3 Categorías desde el Google Sheet
-      const cat1 = findVal(["1racategoria", "1acategoria", "categoria1", "category1", "type", "tipo"]) || values[4] || "Otros";
-      const cat2 = findVal(["2dacategoria", "2acategoria", "categoria2", "category2", "subcategoria", "subcategory"]) || values[5] || "";
-      const cat3 = findVal(["3racategoria", "3acategoria", "3tacategoria", "categoria3", "category3"]) || values[6] || "";
+        const images = parseMultipleImages(rawImage);
+        const image = images[0] || "/placeholder.svg";
 
-      // Mantenemos retrocompatibilidad con 'type' y 'subcategory'
-      const type = cat1;
-      const subcategory = cat2;
+        if (!name || price <= 0) return;
 
-      // La columna de imágenes queda como la 8va columna (índice 7) o por nombre
-      const rawImage = findVal(["images", "imagenes", "image", "imagen", "foto"]) || values[7] || "/placeholder.jpg";
-      const images = parseMultipleImages(rawImage);
-      const image = images[0] || "/placeholder.svg";
-
-      if (name) {
         products.push({
-          id: findVal(["id"]) || values[0] || String(index + 1),
+          id,
           name,
           description,
           price,
-          type,
-          subcategory,
+          type: cat1,
+          subcategory: cat2,
           cat1,
           cat2,
           cat3,
           image,
           images,
         });
+      } catch (rowError) {
+        console.error(`Error procesando fila ${index + 2}:`, rowError);
       }
     });
 
