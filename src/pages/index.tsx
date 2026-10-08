@@ -189,7 +189,7 @@ export default function Home() {
         <Header />
         <Hero />
 
-        <main id="productos" className="container mx-auto px-2 sm:px-4 py-20">
+        <main id="productos" className="container mx-auto px-6 sm:px-8 py-20">
           <m.div
             className="text-center mb-10"
             initial={{ opacity: 0, y: 40 }}
@@ -300,7 +300,7 @@ export default function Home() {
           ) : filteredProducts.length > 0 ? (
             <m.div
               layout
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full overflow-hidden"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10 lg:gap-12 max-w-full overflow-hidden py-4"
             >
               <AnimatePresence mode="popLayout">
                 {filteredProducts.map((product) => (
