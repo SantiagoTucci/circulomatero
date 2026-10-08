@@ -63,17 +63,17 @@ export function ProductCard({ product }: { product: any }) {
             <button
               onClick={prevImage}
               aria-label="Imagen anterior"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 sm:p-1.5 rounded-full backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 z-10"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2.5 sm:p-1.5 rounded-full backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 z-10"
             >
-              <ChevronLeft className="w-6 h-6 sm:w-5 sm:h-5" />
+              <ChevronLeft className="w-5 h-5 sm:w-5 sm:h-5" />
             </button>
 
             <button
               onClick={nextImage}
               aria-label="Siguiente imagen"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 sm:p-1.5 rounded-full backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 z-10"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2.5 sm:p-1.5 rounded-full backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 z-10"
             >
-              <ChevronRight className="w-6 h-6 sm:w-5 sm:h-5" />
+              <ChevronRight className="w-5 h-5 sm:w-5 sm:h-5" />
             </button>
 
             {/* Indicadores inferiores (Dots) */}

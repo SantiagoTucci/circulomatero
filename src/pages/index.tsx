@@ -185,11 +185,12 @@ export default function Home() {
 
   return (
     <LazyMotion features={domAnimation}>
-      <m.div className="min-h-screen">
+      <m.div className="min-h-screen w-full overflow-x-hidden">
         <Header />
         <Hero />
 
-        <main id="productos" className="container mx-auto px-6 sm:px-8 py-20">
+        {/* 🛍️ Sección de Productos y Filtros */}
+        <main id="productos" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 overflow-hidden">
           <m.div
             className="text-center mb-10"
             initial={{ opacity: 0, y: 40 }}
@@ -290,37 +291,40 @@ export default function Home() {
             </div>
           )}
 
-          {/* Grid de Productos con animación lateral */}
+          {/* Grid de Productos sin desbordamiento horizontal */}
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="h-96 bg-muted/40 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : filteredProducts.length > 0 ? (
-            <m.div
-              layout
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10 lg:gap-12 max-w-full overflow-hidden py-4"
-            >
-              <AnimatePresence mode="popLayout">
-                {filteredProducts.map((product) => (
-                  <m.div
-                    key={product.id}
-                    layout
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.35, ease: "easeOut" }}
-                  >
-                    <ProductCard product={product} />
-                  </m.div>
-                ))}
-              </AnimatePresence>
-            </m.div>
+            <div className="w-full overflow-hidden py-2">
+              <m.div
+                layout
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full"
+              >
+                <AnimatePresence mode="popLayout">
+                  {filteredProducts.map((product) => (
+                    <m.div
+                      key={product.id}
+                      layout
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="w-full min-w-0"
+                    >
+                      <ProductCard product={product} />
+                    </m.div>
+                  ))}
+                </AnimatePresence>
+              </m.div>
+            </div>
           ) : (
             <m.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               className="text-center py-16 text-muted-foreground"
             >
               No hay productos disponibles para los filtros seleccionados.
