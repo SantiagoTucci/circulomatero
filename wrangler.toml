@@ -2,10 +2,10 @@ name = "circulomatero"
 main = "cloudflare-worker/index.ts"
 compatibility_date = "2024-01-01"
 
-# 🛠️ Configuración de Assets Estáticos (Sirve tu React App)
+# 🛠️ Configuración de Assets Estáticos (Valor corregido)
 [assets]
 directory = "./dist"
-not_found_handling = "single-page-app"
+not_found_handling = "single-page-application"
 
 # KV namespace para caché de productos
 [[kv_namespaces]]
