@@ -14,11 +14,16 @@ export default {
       return await handleProductsApi(env, ctx);
     }
 
-    // 2. Si no es /api/products, retorna 404 para que Cloudflare sirva el asset estático
+    // 2. Proxy de Imágenes para almacenar en Edge Cache (Cloudflare)
+    if (url.pathname === "/api/image-proxy") {
+      return await handleImageProxy(request, ctx);
+    }
+
+    // 3. Si no coincide con ninguna ruta API, retorna 404 para que Cloudflare sirva los activos estáticos
     return new Response("Not Found", { status: 404 });
   },
 
-  // 3. Cron Trigger cada 10 minutos
+  // 4. Cron Trigger cada 10 minutos
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
       (async () => {
@@ -42,6 +47,8 @@ export default {
     );
   },
 };
+
+// --- HANDLERS ---
 
 async function handleProductsApi(env: Env, ctx: ExecutionContext): Promise<Response> {
   let cachedProducts: string | null = null;
@@ -84,6 +91,50 @@ async function handleProductsApi(env: Env, ctx: ExecutionContext): Promise<Respo
     },
   });
 }
+
+async function handleImageProxy(request: Request, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+  const imageUrl = url.searchParams.get("url");
+
+  if (!imageUrl) {
+    return new Response("Parámetro 'url' requerido", { status: 400 });
+  }
+
+  const cacheKey = new Request(imageUrl, request);
+  const cache = caches.default;
+
+  // Buscar en la memoria caché Edge de Cloudflare
+  let response = await cache.match(cacheKey);
+
+  if (!response) {
+    try {
+      const originResponse = await fetch(imageUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      });
+
+      if (!originResponse.ok) {
+        return new Response("Error al obtener la imagen de origen", { status: originResponse.status });
+      }
+
+      // Crear respuesta con encabezados de caché inmutable (1 año)
+      response = new Response(originResponse.body, originResponse);
+      response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+      response.headers.set("Access-Control-Allow-Origin", "*");
+
+      // Almacenar en la Edge Cache de Cloudflare en segundo plano
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    } catch (err: any) {
+      return new Response(`Error en el proxy de imágenes: ${err.message}`, { status: 500 });
+    }
+  }
+
+  return response;
+}
+
+// --- PARSER DE SHEETS Y HELPERS ---
 
 async function fetchProductsFromSheets(csvUrl: string): Promise<any[]> {
   const response = await fetch(csvUrl);
@@ -245,8 +296,9 @@ function getDirectDriveImageUrl(url: string): string {
     cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
 
   if (driveIdMatch?.[1]) {
-    // Reducción a sz=w400 baja el peso de cada imagen de ~300KB a ~40KB sin perder calidad visual
-    return `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w400`;
+    const rawDriveUrl = `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w400`;
+    // Pasa la imagen por el proxy de caché de Cloudflare
+    return `/api/image-proxy?url=${encodeURIComponent(rawDriveUrl)}`;
   }
 
   if (!cleanUrl.startsWith("/") && !cleanUrl.startsWith("http")) {
