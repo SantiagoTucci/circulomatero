@@ -442,7 +442,7 @@ export default function Home() {
                 </m.div>
               </m.div>
 
-              <m.div
+              {/* <m.div
                 className="w-full md:w-1/2 flex justify-center order-last md:order-2"
                 initial={{ opacity: 0, x: -60 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -458,7 +458,7 @@ export default function Home() {
                     className="w-full h-full rounded-2xl border-0"
                   />
                 </div>
-              </m.div>
+              </m.div> */}
             </m.div>
           </div>
         </section>
