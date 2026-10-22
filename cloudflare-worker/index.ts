@@ -284,3 +284,4 @@ function getDirectDriveImageUrl(url: string): string {
 
   return cleanUrl;
 }
+
