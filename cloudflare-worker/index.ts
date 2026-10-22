@@ -3,7 +3,7 @@
 export interface Env {
   PRODUCTS_CACHE: KVNamespace;
   SHEETS_CSV_URL: string;
-  ASSETS: { fetch: typeof fetch };
+  ASSETS?: { fetch: typeof fetch };
 }
 
 export type ScheduledEvent = {
@@ -16,91 +16,118 @@ export type ExecutionContext = {
 };
 
 export default {
-  // 1. Manejador de solicitudes HTTP (API + Assets Estáticos)
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
+    try {
+      const url = new URL(request.url);
 
-    // Servir Endpoint de la API de productos
-    if (url.pathname === "/api/products" || url.pathname === "/api/products.json") {
-      try {
-        // Intentar leer la clave unificada "products" desde KV
-        let cachedProducts = await env.PRODUCTS_CACHE.get("products");
-
-        // Fallback en tiempo real a Google Sheets si la caché está vacía
-        if (!cachedProducts) {
-          const sheetUrl =
-            env.SHEETS_CSV_URL ||
-            "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
-
-          const products = await fetchProductsFromSheets(sheetUrl);
-          cachedProducts = JSON.stringify(products);
-
-          // Guardar en KV de fondo
-          ctx.waitUntil(
-            env.PRODUCTS_CACHE.put("products", cachedProducts, {
-              expirationTtl: 3600,
-              metadata: { updated: Date.now() },
-            })
-          );
-        }
-
-        return new Response(cachedProducts, {
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=300, s-maxage=600",
-            "Access-Control-Allow-Origin": "*",
-          },
-        });
-      } catch (error: any) {
-        console.error("Error en API /api/products:", error);
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch products", details: error.message }),
-          { status: 500, headers: { "Content-Type": "application/json" } }
-        );
+      // 1. Manejo exclusivo de la API de Productos
+      if (url.pathname === "/api/products" || url.pathname === "/api/products.json") {
+        return await handleProductsApi(env, ctx);
       }
-    }
 
-    // Delegar cualquier otra ruta a la carpeta ./dist
-    return env.ASSETS.fetch(request);
+      // 2. Servir la aplicación React (Assets estáticos)
+      if (env.ASSETS && typeof env.ASSETS.fetch === "function") {
+        return await env.ASSETS.fetch(request);
+      }
+
+      // Fallback si por alguna razón ASSETS no responde
+      return new Response("OK - Backend activo", { status: 200 });
+
+    } catch (globalError: any) {
+      console.error("Excepción no capturada en Worker:", globalError);
+      return new Response(
+        JSON.stringify({
+          error: "Error interno del servidor",
+          details: globalError?.message || "Excepción no controlada",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   },
 
-  // 2. Cron Trigger para refrescar la caché en segundo plano cada 10 minutos
+  // 3. Cron Trigger cada 10 minutos
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
       (async () => {
         try {
-          console.log("Updating products cache from Google Sheets...");
+          console.log("Actualizando caché desde Google Sheets vía Cron...");
           const sheetUrl =
             env.SHEETS_CSV_URL ||
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
 
           const products = await fetchProductsFromSheets(sheetUrl);
 
-          if (products.length > 0) {
+          if (products && products.length > 0) {
             await env.PRODUCTS_CACHE.put("products", JSON.stringify(products), {
               expirationTtl: 3600,
               metadata: { updated: Date.now() },
             });
-            console.log(`Cached ${products.length} products successfully`);
-          } else {
-            console.warn("No products fetched, preserving current cache");
+            console.log(`Caché actualizada con éxito: ${products.length} productos.`);
           }
-        } catch (error) {
-          console.error("Error updating products cache:", error);
+        } catch (cronError) {
+          console.error("Error actualizando caché en Cron:", cronError);
         }
       })()
     );
   },
 };
 
-// --- HELPER FUNCTIONS ---
+// --- HANDLERS Y HELPERS ROBUSTOS ---
+
+async function handleProductsApi(env: Env, ctx: ExecutionContext): Promise<Response> {
+  let cachedProducts: string | null = null;
+
+  try {
+    // Intentar leer desde Cloudflare KV
+    if (env.PRODUCTS_CACHE) {
+      cachedProducts = await env.PRODUCTS_CACHE.get("products");
+    }
+  } catch (kvError) {
+    console.error("Error leyendo de KV:", kvError);
+  }
+
+  // Fallback directo a Google Sheets si el KV está vacío
+  if (!cachedProducts) {
+    try {
+      const sheetUrl =
+        env.SHEETS_CSV_URL ||
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
+
+      const products = await fetchProductsFromSheets(sheetUrl);
+      cachedProducts = JSON.stringify(products);
+
+      if (env.PRODUCTS_CACHE && products.length > 0) {
+        ctx.waitUntil(
+          env.PRODUCTS_CACHE.put("products", cachedProducts, {
+            expirationTtl: 3600,
+            metadata: { updated: Date.now() },
+          })
+        );
+      }
+    } catch (sheetError: any) {
+      console.error("Error obteniendo productos de Sheets:", sheetError);
+      cachedProducts = JSON.stringify([]);
+    }
+  }
+
+  return new Response(cachedProducts, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=300, s-maxage=600",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+}
 
 async function fetchProductsFromSheets(csvUrl: string): Promise<any[]> {
   const response = await fetch(csvUrl);
-  if (!response.ok) throw new Error(`Failed to fetch CSV: ${response.status}`);
+  if (!response.ok) throw new Error(`HTTP Error Sheets: ${response.status}`);
 
   const csvText = await response.text();
-  if (!csvText.trim()) return [];
+  if (!csvText || !csvText.trim()) return [];
 
   const rows = parseCSV(csvText);
   if (rows.length <= 1) return [];
@@ -166,8 +193,8 @@ async function fetchProductsFromSheets(csvUrl: string): Promise<any[]> {
         image,
         images,
       });
-    } catch (rowError) {
-      console.error(`Error processing row ${index + 2}:`, rowError);
+    } catch {
+      // Ignorar fila corrupta individualmente sin romper la ejecución completa
     }
   });
 
@@ -221,7 +248,7 @@ function parseCSV(text: string): string[][] {
 }
 
 function normalizeHeader(header: string): string {
-  return header
+  return String(header ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
@@ -232,7 +259,7 @@ function normalizeHeader(header: string): string {
 
 function parsePrice(priceStr: string): number {
   if (!priceStr) return 0;
-  const cleaned = priceStr.replace(/[$\s.]/g, "").replace(/,/g, ".");
+  const cleaned = String(priceStr).replace(/[$\s.]/g, "").replace(/,/g, ".");
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
 }
