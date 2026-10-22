@@ -6,7 +6,6 @@ compatibility_date = "2024-01-01"
 [[kv_namespaces]]
 binding = "PRODUCTS_CACHE"
 id = "7584972c60ec48069b96c8a65ad31da3"
-preview_id = "products_cache_preview"
 
 # Cron Trigger para actualizar caché cada 10 minutos
 [triggers]
