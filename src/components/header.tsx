@@ -63,6 +63,10 @@ export function Header() {
           <img
             src={logo}
             alt="Círculo Matero Logo"
+            loading="eager"
+            decoding="async"
+            width="40"
+            height="40"
             className={`w-10 h-10 rounded-full object-cover transition-transform duration-300 ${
               isScrolled ? "scale-95" : "scale-100"
             }`}

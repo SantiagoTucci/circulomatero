@@ -13,6 +13,21 @@ export default defineConfig({
   build: {
     rollupOptions: {
       external: ["/wrangler.json", "/wrangler.jsonc"],
+      output: {
+        manualChunks: {
+          'framer-motion': ['framer-motion'],
+          'react-router-dom': ['react-router-dom'],
+          'radix-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-label',
+            '@radix-ui/react-scroll-area',
+            '@radix-ui/react-separator',
+            '@radix-ui/react-slot',
+          ],
+          'emailjs': ['@emailjs/browser'],
+        },
+      },
     },
+    chunkSizeWarningLimit: 1000,
   },
 });

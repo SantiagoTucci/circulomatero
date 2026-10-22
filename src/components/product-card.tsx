@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/hooks/cart-context";
 import { parsePrice } from "@/lib/parse-price";
 
-export function ProductCard({ product }: { product: any }) {
+export function ProductCard({ product, isFirstProduct = false }: { product: any; isFirstProduct?: boolean }) {
   const { addItem, toggleCart } = useCart();
   const [added, setAdded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -17,6 +16,26 @@ export function ProductCard({ product }: { product: any }) {
 
   // 🛠️ Obtenemos la versión numérica real del precio
   const numericPrice = parsePrice(product?.price);
+
+  // Generar srcset con diferentes tamaños para Google Drive
+  const generateSrcSet = (imageUrl: string) => {
+    if (!imageUrl.includes("drive.google.com")) {
+      return imageUrl;
+    }
+
+    const fileIdMatch = imageUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (!fileIdMatch?.[1]) return imageUrl;
+
+    const fileId = fileIdMatch[1];
+    return [
+      `https://drive.google.com/thumbnail?id=${fileId}&sz=w300 300w`,
+      `https://drive.google.com/thumbnail?id=${fileId}&sz=w600 600w`,
+      `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200 1200w`,
+    ].join(", ");
+  };
+
+  const currentImageSrc = images[currentImageIndex];
+  const srcSet = generateSrcSet(currentImageSrc);
 
   const handleAdd = () => {
     // 🛠️ Mandamos al carrito el objeto con el precio ya sanitizado como número puro
@@ -42,20 +61,20 @@ export function ProductCard({ product }: { product: any }) {
   return (
     <div className="group bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 will-change-transform">
       <div className="aspect-square bg-muted relative overflow-hidden">
-        {/* Renderizado de la imagen actual con animación suave */}
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={currentImageIndex}
-            src={images[currentImageIndex]}
-            alt={`${product.name} - Imagen ${currentImageIndex + 1}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform"
-          />
-        </AnimatePresence>
+        {/* Renderizado de la imagen actual */}
+        <img
+          key={currentImageIndex}
+          src={currentImageSrc}
+          srcSet={srcSet}
+          sizes="(max-width: 640px) 300px, (max-width: 1024px) 600px, 1200px"
+          alt={`${product.name} - Imagen ${currentImageIndex + 1}`}
+          loading={isFirstProduct ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={isFirstProduct ? "high" : "auto"}
+          width="600"
+          height="600"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform"
+        />
 
         {/* Controles de navegación si hay más de 1 imagen */}
         {images.length > 1 && (

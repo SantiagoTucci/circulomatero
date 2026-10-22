@@ -91,6 +91,11 @@ export function Hero() {
         <img
           src="/mates.png"
           alt="Colección de mates artesanales"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          width="1200"
+          height="600"
           className="w-full max-w-full h-auto object-cover"
         />
       </div>

@@ -48,7 +48,8 @@ function getDirectDriveImageUrl(url: string): string {
 
   if (driveIdMatch?.[1]) {
     const fileId = driveIdMatch[1];
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    // Usar tamaño más pequeño por defecto (600px), el frontend manejará srcset
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
   }
 
   if (!cleanUrl.startsWith("/") && !cleanUrl.startsWith("http")) {

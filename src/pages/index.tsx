@@ -6,14 +6,6 @@ import { getProducts, sampleProducts, normalizeText } from "../../public/product
 import { Product } from "@/types/product";
 import { InfiniteCarousel } from "@/components/infinite-carousel";
 import { ProductCard } from "@/components/product-card";
-import {
-  LazyMotion,
-  domAnimation,
-  m,
-  useMotionValue,
-  useTransform,
-  animate,
-} from "framer-motion";
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -191,37 +183,26 @@ export default function Home() {
   };
 
   return (
-    <LazyMotion features={domAnimation}>
-      <m.div className="min-h-screen w-full overflow-x-hidden">
-        <Header />
-        <Hero />
+    <div className="min-h-screen w-full overflow-x-hidden">
+      <Header />
+      <Hero />
 
         {/* 🛍️ Sección de Productos y Filtros */}
         <main id="productos" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 overflow-hidden">
-          <m.div
-            className="text-center mb-10"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            viewport={{ once: true, amount: 0.3 }}
-          >
+          <div className="text-center mb-10">
             <h2 className="text-4xl sm:text-5xl font-bold mb-4 gradient-text">
               Nuestra Colección
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty font-[system-ui]">
               Cada mate es una pieza única, elaborada con materiales nobles y técnicas tradicionales.
             </p>
-          </m.div>
+          </div>
 
           {!loading && (
             <div className="space-y-4 mb-12">
               {/* Nivel 1 */}
               {listCat1.length > 1 && (
-                <m.div
-                  className="flex flex-wrap justify-center gap-2"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
+                <div className="flex flex-wrap justify-center gap-2">
                   {listCat1.map((item) => {
                     const selected = normalizeText(cat1) === normalizeText(item);
 
@@ -239,16 +220,12 @@ export default function Home() {
                       </button>
                     );
                   })}
-                </m.div>
+                </div>
               )}
 
               {/* Nivel 2 */}
               {listCat2.length > 0 && (
-                <m.div
-                  className="flex flex-wrap justify-center gap-2 pt-2 border-t border-muted/50 max-w-2xl mx-auto"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+                <div className="flex flex-wrap justify-center gap-2 pt-2 border-t border-muted/50 max-w-2xl mx-auto">
                   {listCat2.map((item) => {
                     const selected = normalizeText(cat2) === normalizeText(item);
 
@@ -266,16 +243,12 @@ export default function Home() {
                       </button>
                     );
                   })}
-                </m.div>
+                </div>
               )}
 
               {/* Nivel 3 */}
               {listCat3.length > 0 && (
-                <m.div
-                  className="flex flex-wrap justify-center gap-2 pt-1 max-w-2xl mx-auto"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+                <div className="flex flex-wrap justify-center gap-2 pt-1 max-w-2xl mx-auto">
                   {listCat3.map((item) => {
                     const selected = normalizeText(cat3) === normalizeText(item);
 
@@ -293,7 +266,7 @@ export default function Home() {
                       </button>
                     );
                   })}
-                </m.div>
+                </div>
               )}
             </div>
           )}
@@ -308,9 +281,9 @@ export default function Home() {
           ) : filteredProducts.length > 0 ? (
             <div className="w-full overflow-hidden py-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                {visibleProducts.map((product) => (
+                {visibleProducts.map((product, index) => (
                   <div key={product.id} className="w-full min-w-0">
-                    <ProductCard product={product} />
+                    <ProductCard product={product} isFirstProduct={index === 0} />
                   </div>
                 ))}
               </div>
@@ -336,27 +309,15 @@ export default function Home() {
         {/* Nosotros */}
         <section id="nosotros" className="bg-muted/30 py-25">
           <div className="container mx-auto px-2 sm:px-4">
-            <m.div
-              className="max-w-4xl mx-auto text-center"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              viewport={{ once: true, amount: 0.3 }}
-            >
+            <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-4xl font-bold mb-6 gradient-text">Nuestra Historia</h2>
               <p className="text-lg text-muted-foreground leading-relaxed mb-8 text-pretty">
                 Somos tres amigos unidos por la pasión y la tradición del mate. Este emprendimiento nació para compartir la calidez, el encuentro y la identidad que el mate simboliza para todos los argentinos, a través de productos de calidad.
               </p>
 
-              <m.div
-                className="overflow-hidden"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
+              <div className="overflow-hidden">
                 <InfiniteCarousel images={carouselImages} speed={40} />
-              </m.div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mt-12">
                 {[
@@ -365,43 +326,23 @@ export default function Home() {
                   { value: 50, suffix: "+", label: "Clientes felices" },
                   { value: 100, suffix: "%", label: "Artesanal y de calidad" },
                 ].map((item, index) => (
-                  <m.div
-                    key={index}
-                    className="text-center"
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.2, duration: 0.6 }}
-                    viewport={{ once: true }}
-                  >
+                  <div key={index} className="text-center">
                     <div className="text-4xl font-bold text-primary mb-2">
-                      <AnimatedNumber value={item.value} />
-                      {item.suffix}
+                      {item.value}{item.suffix}
                     </div>
                     <div className="text-muted-foreground">{item.label}</div>
-                  </m.div>
+                  </div>
                 ))}
               </div>
-            </m.div>
+            </div>
           </div>
         </section>
 
         {/* Contacto */}
         <section id="contacto" className="py-25 text-background">
           <div className="container mx-auto px-4">
-            <m.div
-              className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-8"
-              initial={{ opacity: 0, y: 60 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              viewport={{ once: true, amount: 0.3 }}
-            >
-              <m.div
-                className="w-full md:w-1/2 text-center md:text-left order-first md:order-1"
-                initial={{ opacity: 0, x: 60 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                viewport={{ once: true }}
-              >
+            <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-8">
+              <div className="w-full md:w-1/2 text-center md:text-left order-first md:order-1">
                 <h2 className="text-4xl font-bold mb-6 gradient-text">Contactanos</h2>
                 <p className="text-lg text-muted-foreground mb-8 text-pretty">
                   ¿Tenés alguna duda? Escribinos y te respondemos.
@@ -426,70 +367,27 @@ export default function Home() {
                   </a>
                 </div>
 
-                <m.div
-                  className="hidden md:flex justify-center mt-10"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  viewport={{ once: true }}
-                >
+                <div className="hidden md:flex justify-center mt-10">
                   <img
                     src="/carousel-images/instagram-feed.png"
                     alt="Instagram Círculo Matero"
                     loading="lazy"
                     className="w-100 xl:w-120 max-w-full h-auto transition-all duration-300 hover:-translate-y-2 drop-shadow-lg shadow-sm hover:shadow-xl rounded-2xl overflow-hidden will-change-transform"
                   />
-                </m.div>
-              </m.div>
-
-              {/* <m.div
-                className="w-full md:w-1/2 flex justify-center order-last md:order-2"
-                initial={{ opacity: 0, x: -60 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
-                <div className="w-full max-w-xs sm:max-w-sm md:max-w-md aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl">
-                  <iframe
-                    src="https://www.tiktok.com/embed/7556644757905198392"
-                    allowFullScreen
-                    title="Video de Círculo Matero"
-                    sandbox="allow-scripts allow-same-origin allow-popups"
-                    className="w-full h-full rounded-2xl border-0"
-                  />
                 </div>
-              </m.div> */}
-            </m.div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* Footer */}
-        <m.footer
-          className="bg-foreground text-background py-8"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          viewport={{ once: true, amount: 0.2 }}
-        >
+        <footer className="bg-foreground text-background py-8">
           <div className="container mx-auto px-4 text-center space-y-4">
             <p className="text-sm opacity-80">
               © 2026 Círculo Matero. Todos los derechos reservados.
             </p>
           </div>
-        </m.footer>
-      </m.div>
-    </LazyMotion>
+        </footer>
+      </div>
   );
-}
-
-function AnimatedNumber({ value }: { value: number }) {
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (latest) => Math.floor(latest));
-
-  useEffect(() => {
-    const controls = animate(count, value, { duration: 1.5, ease: "easeOut" });
-    return () => controls.stop();
-  }, [value]);
-
-  return <m.span>{rounded}</m.span>;
 }

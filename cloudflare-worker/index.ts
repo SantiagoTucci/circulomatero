@@ -1,18 +1,18 @@
 /// <reference types="@cloudflare/workers-types" />
 
-interface Env {
+type Env = {
   PRODUCTS_CACHE: KVNamespace;
   SHEETS_CSV_URL: string;
-}
+};
 
-export interface ScheduledEvent {
+export type ScheduledEvent = {
   scheduledTime: number;
   cron: string;
-}
+};
 
-export interface ExecutionContext {
+export type ExecutionContext = {
   waitUntil(promise: Promise<unknown>): void;
-}
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -274,7 +274,8 @@ function getDirectDriveImageUrl(url: string): string {
 
   if (driveIdMatch?.[1]) {
     const fileId = driveIdMatch[1];
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    // Usar tamaño más pequeño por defecto (600px), el frontend manejará srcset
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
   }
 
   if (!cleanUrl.startsWith("/") && !cleanUrl.startsWith("http")) {
