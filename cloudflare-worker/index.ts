@@ -101,7 +101,9 @@ async function handleImageProxy(request: Request, ctx: ExecutionContext): Promis
   }
 
   const cacheKey = new Request(imageUrl, request);
-  const cache = caches.default;
+
+  // 🛠️ FIX TS2339: Usar (caches as any).default para evitar el conflicto con el tipo global CacheStorage
+  const cache = (caches as any).default;
 
   // Buscar en la memoria caché Edge de Cloudflare
   let response = await cache.match(cacheKey);
