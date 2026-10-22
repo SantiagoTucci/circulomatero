@@ -1,13 +1,14 @@
 export interface Env {
   PRODUCTS_CACHE: KVNamespace;
   SHEETS_CSV_URL: string;
+  ASSETS: { fetch: typeof fetch }; // Binding automático de Cloudflare para archivos estáticos
 }
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // Captura explícita de las peticiones de API
+    // 1. Manejador exclusivo para la API de productos
     if (url.pathname === "/api/products" || url.pathname === "/api/products.json") {
       try {
         let cachedProducts = await env.PRODUCTS_CACHE.get("PRODUCTS_DATA");
@@ -19,7 +20,7 @@ export default {
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
 
           const res = await fetch(sheetUrl);
-          if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+          if (!res.ok) throw new Error(`Error HTTP Sheets ${res.status}`);
 
           const csvText = await res.text();
           const productsJson = parseCsvToJson(csvText);
@@ -45,8 +46,8 @@ export default {
       }
     }
 
-    // Para cualquier otra ruta, delega el servicio al módulo de Assets estáticos
-    return new Response("Not Found", { status: 404 });
+    // 2. Para cualquier otra ruta (como la raíz /), delega el renderizado a la carpeta ./dist
+    return env.ASSETS.fetch(request);
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
