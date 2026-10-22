@@ -3,49 +3,19 @@
 export interface Env {
   PRODUCTS_CACHE: KVNamespace;
   SHEETS_CSV_URL: string;
-  ASSETS?: { fetch: typeof fetch };
 }
-
-export type ScheduledEvent = {
-  scheduledTime: number;
-  cron: string;
-};
-
-export type ExecutionContext = {
-  waitUntil(promise: Promise<unknown>): void;
-};
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    try {
-      const url = new URL(request.url);
+    const url = new URL(request.url);
 
-      // 1. Manejo exclusivo de la API de Productos
-      if (url.pathname === "/api/products" || url.pathname === "/api/products.json") {
-        return await handleProductsApi(env, ctx);
-      }
-
-      // 2. Servir la aplicación React (Assets estáticos)
-      if (env.ASSETS && typeof env.ASSETS.fetch === "function") {
-        return await env.ASSETS.fetch(request);
-      }
-
-      // Fallback si por alguna razón ASSETS no responde
-      return new Response("OK - Backend activo", { status: 200 });
-
-    } catch (globalError: any) {
-      console.error("Excepción no capturada en Worker:", globalError);
-      return new Response(
-        JSON.stringify({
-          error: "Error interno del servidor",
-          details: globalError?.message || "Excepción no controlada",
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+    // 1. Manejo exclusivo de la API de Productos
+    if (url.pathname === "/api/products" || url.pathname === "/api/products.json") {
+      return await handleProductsApi(env, ctx);
     }
+
+    // 2. Si no es /api/products, retorna 404 para que Cloudflare sirva el asset estático
+    return new Response("Not Found", { status: 404 });
   },
 
   // 3. Cron Trigger cada 10 minutos
@@ -53,7 +23,6 @@ export default {
     ctx.waitUntil(
       (async () => {
         try {
-          console.log("Actualizando caché desde Google Sheets vía Cron...");
           const sheetUrl =
             env.SHEETS_CSV_URL ||
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
@@ -65,7 +34,6 @@ export default {
               expirationTtl: 3600,
               metadata: { updated: Date.now() },
             });
-            console.log(`Caché actualizada con éxito: ${products.length} productos.`);
           }
         } catch (cronError) {
           console.error("Error actualizando caché en Cron:", cronError);
@@ -75,13 +43,10 @@ export default {
   },
 };
 
-// --- HANDLERS Y HELPERS ROBUSTOS ---
-
 async function handleProductsApi(env: Env, ctx: ExecutionContext): Promise<Response> {
   let cachedProducts: string | null = null;
 
   try {
-    // Intentar leer desde Cloudflare KV
     if (env.PRODUCTS_CACHE) {
       cachedProducts = await env.PRODUCTS_CACHE.get("products");
     }
@@ -89,7 +54,6 @@ async function handleProductsApi(env: Env, ctx: ExecutionContext): Promise<Respo
     console.error("Error leyendo de KV:", kvError);
   }
 
-  // Fallback directo a Google Sheets si el KV está vacío
   if (!cachedProducts) {
     try {
       const sheetUrl =
@@ -107,8 +71,7 @@ async function handleProductsApi(env: Env, ctx: ExecutionContext): Promise<Respo
           })
         );
       }
-    } catch (sheetError: any) {
-      console.error("Error obteniendo productos de Sheets:", sheetError);
+    } catch {
       cachedProducts = JSON.stringify([]);
     }
   }
@@ -194,7 +157,7 @@ async function fetchProductsFromSheets(csvUrl: string): Promise<any[]> {
         images,
       });
     } catch {
-      // Ignorar fila corrupta individualmente sin romper la ejecución completa
+      // Ignorar fila corrupta individualmente
     }
   });
 
