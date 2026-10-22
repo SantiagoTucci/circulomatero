@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCart } from "@/hooks/cart-context";
 import { parsePrice } from "@/lib/parse-price";
+import { m } from "framer-motion";
 
 export function ProductCard({ product, isFirstProduct = false }: { product: any; isFirstProduct?: boolean }) {
   const { addItem, toggleCart } = useCart();
@@ -38,7 +39,7 @@ export function ProductCard({ product, isFirstProduct = false }: { product: any;
   const srcSet = generateSrcSet(currentImageSrc);
 
   const handleAdd = () => {
-    // 🛠️ Mandamos al carrito el objeto con el precio ya sanitizado como número puro
+    // 🛠️ Mandamos al carrito el objeto con el precio sanitizado como número puro
     addItem({
       ...product,
       price: numericPrice,
@@ -59,7 +60,7 @@ export function ProductCard({ product, isFirstProduct = false }: { product: any;
   };
 
   return (
-    <div className="group bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 will-change-transform">
+    <div className="group bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 will-change-transform w-full">
       <div className="aspect-square bg-muted relative overflow-hidden">
         {/* Renderizado de la imagen actual */}
         <img
@@ -123,11 +124,10 @@ export function ProductCard({ product, isFirstProduct = false }: { product: any;
           {product.description}
         </p>
         <div className="flex items-center justify-between">
-          {/* 🛠️ Formateamos sobre numericPrice que garantizamos que es un Number */}
           <span className="text-xl font-bold text-primary">
             $ {numericPrice.toLocaleString("es-AR")}
           </span>
-          <motion.div whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+          <m.div whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
             <Button
               size="sm"
               onClick={handleAdd}
@@ -145,7 +145,7 @@ export function ProductCard({ product, isFirstProduct = false }: { product: any;
                 </>
               )}
             </Button>
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </div>
