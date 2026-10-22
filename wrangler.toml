@@ -1,0 +1,17 @@
+name = "circulomatero"
+main = "cloudflare-worker/index.ts"
+compatibility_date = "2024-01-01"
+
+# KV namespace para caché de productos
+[[kv_namespaces]]
+binding = "PRODUCTS_CACHE"
+id = "products_cache"
+preview_id = "products_cache_preview"
+
+# Cron Trigger para actualizar caché cada 10 minutos
+[triggers]
+crons = ["*/10 * * * *"]
+
+# Variables de entorno
+[vars]
+SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv"

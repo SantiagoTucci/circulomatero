@@ -1,5 +1,4 @@
 {
-  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist/out-tsc",
     "rootDir": "./src",
@@ -25,6 +24,7 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "cloudflare-worker"
   ]
 }

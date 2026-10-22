@@ -10,7 +10,6 @@ import {
   LazyMotion,
   domAnimation,
   m,
-  AnimatePresence,
   useMotionValue,
   useTransform,
   animate,
@@ -19,6 +18,7 @@ import {
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [visibleCount, setVisibleCount] = useState<number>(12);
 
   const location = useLocation();
 
@@ -183,6 +183,13 @@ export default function Home() {
     });
   }, [products, cat1, cat2, cat3]);
 
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  const hasMoreProducts = filteredProducts.length > visibleCount;
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 12, filteredProducts.length));
+  };
+
   return (
     <LazyMotion features={domAnimation}>
       <m.div className="min-h-screen w-full overflow-x-hidden">
@@ -300,35 +307,29 @@ export default function Home() {
             </div>
           ) : filteredProducts.length > 0 ? (
             <div className="w-full overflow-hidden py-2">
-              <m.div
-                layout
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full"
-              >
-                <AnimatePresence mode="popLayout">
-                  {filteredProducts.map((product) => (
-                    <m.div
-                      key={product.id}
-                      layout
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="w-full min-w-0"
-                    >
-                      <ProductCard product={product} />
-                    </m.div>
-                  ))}
-                </AnimatePresence>
-              </m.div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                {visibleProducts.map((product) => (
+                  <div key={product.id} className="w-full min-w-0">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+              
+              {hasMoreProducts && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={handleLoadMore}
+                    className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/80 transition-colors"
+                  >
+                    Cargar más productos ({filteredProducts.length - visibleCount} restantes)
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
-            <m.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-16 text-muted-foreground"
-            >
+            <div className="text-center py-16 text-muted-foreground">
               No hay productos disponibles para los filtros seleccionados.
-            </m.div>
+            </div>
           )}
         </main>
 
