@@ -4,31 +4,30 @@ export interface Env {
 }
 
 export default {
-  // 1. Manejador para solicitudes HTTP del cliente (/api/products)
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // Servir la API de productos
+    // Captura explícita de las peticiones de API
     if (url.pathname === "/api/products" || url.pathname === "/api/products.json") {
       try {
-        // Intentar leer desde el KV PRODUCTS_CACHE
         let cachedProducts = await env.PRODUCTS_CACHE.get("PRODUCTS_DATA");
 
-        // Si el KV aún no se ha poblado, hacer fallback a Google Sheets
+        // Fallback inmediato a Google Sheets si el KV está vacío
         if (!cachedProducts) {
           const sheetUrl =
             env.SHEETS_CSV_URL ||
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
 
           const res = await fetch(sheetUrl);
-          if (!res.ok) throw new Error("Error obteniendo CSV de Sheets");
+          if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
 
           const csvText = await res.text();
           const productsJson = parseCsvToJson(csvText);
           cachedProducts = JSON.stringify(productsJson);
 
-          // Guardar en KV por 1 hora
-          await env.PRODUCTS_CACHE.put("PRODUCTS_DATA", cachedProducts, { expirationTtl: 3600 });
+          ctx.waitUntil(
+            env.PRODUCTS_CACHE.put("PRODUCTS_DATA", cachedProducts, { expirationTtl: 3600 })
+          );
         }
 
         return new Response(cachedProducts, {
@@ -40,16 +39,16 @@ export default {
         });
       } catch (err: any) {
         return new Response(
-          JSON.stringify({ error: "Error interno obteniendo productos", details: err.message }),
+          JSON.stringify({ error: "Error en la API de productos", details: err.message }),
           { status: 500, headers: { "Content-Type": "application/json" } }
         );
       }
     }
 
+    // Para cualquier otra ruta, delega el servicio al módulo de Assets estáticos
     return new Response("Not Found", { status: 404 });
   },
 
-  // 2. Cron Trigger para refrescar la caché en segundo plano cada 10 minutos
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(refreshProductsCache(env));
   },
@@ -73,7 +72,7 @@ async function refreshProductsCache(env: Env) {
       });
     }
   } catch (e) {
-    console.error("Error actualizando KV desde Cron:", e);
+    console.error("Error al actualizar la caché en segundo plano:", e);
   }
 }
 
