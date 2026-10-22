@@ -1,9 +1,10 @@
 /// <reference types="@cloudflare/workers-types" />
 
-type Env = {
+export interface Env {
   PRODUCTS_CACHE: KVNamespace;
   SHEETS_CSV_URL: string;
-};
+  ASSETS: { fetch: typeof fetch };
+}
 
 export type ScheduledEvent = {
   scheduledTime: number;
@@ -15,97 +16,105 @@ export type ExecutionContext = {
 };
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  // 1. Manejador de solicitudes HTTP (API + Assets Estáticos)
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // Endpoint para obtener productos
-    if (url.pathname === "/api/products.json") {
+    // Servir Endpoint de la API de productos
+    if (url.pathname === "/api/products" || url.pathname === "/api/products.json") {
       try {
-        // Intentar obtener de KV
-        const cached = await env.PRODUCTS_CACHE.get("products", "json");
-        
-        if (cached) {
-          return new Response(JSON.stringify(cached), {
-            headers: {
-              "Content-Type": "application/json",
-              "Cache-Control": "public, max-age=300, s-maxage=600",
-              "Access-Control-Allow-Origin": "*",
-            },
-          });
+        // Intentar leer la clave unificada "products" desde KV
+        let cachedProducts = await env.PRODUCTS_CACHE.get("products");
+
+        // Fallback en tiempo real a Google Sheets si la caché está vacía
+        if (!cachedProducts) {
+          const sheetUrl =
+            env.SHEETS_CSV_URL ||
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
+
+          const products = await fetchProductsFromSheets(sheetUrl);
+          cachedProducts = JSON.stringify(products);
+
+          // Guardar en KV de fondo
+          ctx.waitUntil(
+            env.PRODUCTS_CACHE.put("products", cachedProducts, {
+              expirationTtl: 3600,
+              metadata: { updated: Date.now() },
+            })
+          );
         }
 
-        // Si no hay caché, hacer fetch en tiempo real (fallback)
-        const products = await fetchProductsFromSheets(env.SHEETS_CSV_URL);
-        
-        return new Response(JSON.stringify(products), {
+        return new Response(cachedProducts, {
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=60, s-maxage=300",
+            "Cache-Control": "public, max-age=300, s-maxage=600",
             "Access-Control-Allow-Origin": "*",
           },
         });
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        return new Response(JSON.stringify({ error: "Failed to fetch products" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
+      } catch (error: any) {
+        console.error("Error en API /api/products:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch products", details: error.message }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
       }
     }
 
-    // Servir assets estáticos (para Cloudflare Pages)
-    return new Response("Not found", { status: 404 });
+    // Delegar cualquier otra ruta a la carpeta ./dist
+    return env.ASSETS.fetch(request);
   },
 
+  // 2. Cron Trigger para refrescar la caché en segundo plano cada 10 minutos
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    try {
-      console.log("Updating products cache from Google Sheets");
-      
-      const products = await fetchProductsFromSheets(env.SHEETS_CSV_URL);
-      
-      if (products.length > 0) {
-        // Guardar en KV con metadata de timestamp
-        await env.PRODUCTS_CACHE.put("products", JSON.stringify(products), {
-          metadata: { updated: Date.now() },
-        });
-        console.log(`Cached ${products.length} products successfully`);
-      } else {
-        console.error("No products fetched, keeping existing cache");
-      }
-    } catch (error) {
-      console.error("Error updating products cache:", error);
-      // No reemplazar caché si falla
-    }
+    ctx.waitUntil(
+      (async () => {
+        try {
+          console.log("Updating products cache from Google Sheets...");
+          const sheetUrl =
+            env.SHEETS_CSV_URL ||
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4RhFNa0snHZSD8lSJVpAs9hL6H52fKzcy7xMsrVX9ZJygwwYtSyzWK4rRbYCEjghbPXVzsZICcF0K/pub?output=csv";
+
+          const products = await fetchProductsFromSheets(sheetUrl);
+
+          if (products.length > 0) {
+            await env.PRODUCTS_CACHE.put("products", JSON.stringify(products), {
+              expirationTtl: 3600,
+              metadata: { updated: Date.now() },
+            });
+            console.log(`Cached ${products.length} products successfully`);
+          } else {
+            console.warn("No products fetched, preserving current cache");
+          }
+        } catch (error) {
+          console.error("Error updating products cache:", error);
+        }
+      })()
+    );
   },
 };
 
+// --- HELPER FUNCTIONS ---
+
 async function fetchProductsFromSheets(csvUrl: string): Promise<any[]> {
   const response = await fetch(csvUrl);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch CSV: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Failed to fetch CSV: ${response.status}`);
 
   const csvText = await response.text();
-  if (!csvText.trim()) {
-    return [];
-  }
+  if (!csvText.trim()) return [];
 
   const rows = parseCSV(csvText);
-  if (rows.length <= 1) {
-    return [];
-  }
+  if (rows.length <= 1) return [];
 
   const headers = rows[0].map(normalizeHeader);
-  
-  const idIdx = headers.findIndex(h => h === "id" || h === "codigo");
-  const nameIdx = headers.findIndex(h => h === "nombre" || h === "name" || h === "producto");
-  const descIdx = headers.findIndex(h => h === "descripcion" || h === "description" || h === "detalle");
-  const priceIdx = headers.findIndex(h => h === "precio" || h === "price" || h === "valor");
-  const cat1Idx = headers.findIndex(h => h === "categoria1" || h === "1racategoria" || h === "1acategoria");
-  const cat2Idx = headers.findIndex(h => h === "categoria2" || h === "2dacategoria" || h === "2acategoria");
-  const cat3Idx = headers.findIndex(h => h === "categoria3" || h === "3tacategoria" || h === "3racategoria");
-  const imgIdx = headers.findIndex(h => h === "imagen" || h === "images" || h === "imagenes");
+
+  const idIdx = headers.findIndex((h) => h === "id" || h === "codigo");
+  const nameIdx = headers.findIndex((h) => h === "nombre" || h === "name" || h === "producto");
+  const descIdx = headers.findIndex((h) => h === "descripcion" || h === "description" || h === "detalle");
+  const priceIdx = headers.findIndex((h) => h === "precio" || h === "price" || h === "valor");
+  const cat1Idx = headers.findIndex((h) => h === "categoria1" || h === "1racategoria" || h === "1acategoria");
+  const cat2Idx = headers.findIndex((h) => h === "categoria2" || h === "2dacategoria" || h === "2acategoria");
+  const cat3Idx = headers.findIndex((h) => h === "categoria3" || h === "3tacategoria" || h === "3racategoria");
+  const imgIdx = headers.findIndex((h) => h === "imagen" || h === "images" || h === "imagenes");
 
   const products: any[] = [];
 
@@ -162,7 +171,7 @@ async function fetchProductsFromSheets(csvUrl: string): Promise<any[]> {
     }
   });
 
-  return products.length > 0 ? products : [];
+  return products;
 }
 
 function parseCSV(text: string): string[][] {
@@ -192,17 +201,10 @@ function parseCSV(text: string): string[][] {
     }
 
     if ((char === "\n" || char === "\r") && !insideQuotes) {
-      if (char === "\r" && nextChar === "\n") {
-        i++;
-      }
-
+      if (char === "\r" && nextChar === "\n") i++;
       row.push(cell.trim());
       cell = "";
-
-      if (row.some((value) => value.trim() !== "")) {
-        rows.push(row);
-      }
-
+      if (row.some((value) => value.trim() !== "")) rows.push(row);
       row = [];
       continue;
     }
@@ -212,9 +214,7 @@ function parseCSV(text: string): string[][] {
 
   if (cell.length > 0 || row.length > 0) {
     row.push(cell.trim());
-    if (row.some((value) => value.trim() !== "")) {
-      rows.push(row);
-    }
+    if (row.some((value) => value.trim() !== "")) rows.push(row);
   }
 
   return rows;
@@ -232,50 +232,30 @@ function normalizeHeader(header: string): string {
 
 function parsePrice(priceStr: string): number {
   if (!priceStr) return 0;
-  
-  const cleaned = priceStr
-    .replace(/[$\s.]/g, "")
-    .replace(/,/g, ".");
-  
+  const cleaned = priceStr.replace(/[$\s.]/g, "").replace(/,/g, ".");
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
 }
 
 function parseMultipleImages(rawImagesString: string): string[] {
-  if (!rawImagesString?.trim()) {
-    return ["/placeholder.svg"];
-  }
-
+  if (!rawImagesString?.trim()) return ["/placeholder.svg"];
   const urls = rawImagesString
     .split(",")
     .map((url) => url.trim())
-    .filter((url) => {
-      return (
-        url.startsWith("http://") ||
-        url.startsWith("https://") ||
-        url.startsWith("/")
-      );
-    });
+    .filter((url) => url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/"));
 
-  if (urls.length === 0) {
-    return ["/placeholder.svg"];
-  }
-
+  if (urls.length === 0) return ["/placeholder.svg"];
   return urls.map(getDirectDriveImageUrl);
 }
 
 function getDirectDriveImageUrl(url: string): string {
   if (!url) return "/placeholder.svg";
-
   const cleanUrl = url.trim();
   const driveIdMatch =
-    cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
-    cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
 
   if (driveIdMatch?.[1]) {
-    const fileId = driveIdMatch[1];
-    // Usar tamaño más pequeño por defecto (600px), el frontend manejará srcset
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
+    return `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w600`;
   }
 
   if (!cleanUrl.startsWith("/") && !cleanUrl.startsWith("http")) {
@@ -284,4 +264,3 @@ function getDirectDriveImageUrl(url: string): string {
 
   return cleanUrl;
 }
-
